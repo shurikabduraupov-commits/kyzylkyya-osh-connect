@@ -221,7 +221,7 @@ class RideHandler(BaseHTTPRequestHandler):
             if len(pickup_address) < 3:
                 self._send_json(400, {"message": "Так даректи жазыңыз"})
                 return
-            if len(notes) < 3:
+            if len(notes) < 1:
                 self._send_json(400, {"message": "Кошумча эскертүү жазыңыз (үй номери, белги ж.б.)"})
                 return
             if seats_number < 1 or seats_number > 7:
