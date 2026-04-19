@@ -95,6 +95,50 @@ function toCyrillic(text: string): string {
     .join("");
 }
 
+const CYR_TO_LAT_DIGRAPH: Array<[RegExp, string]> = [
+  [/щ/gi, "shch"],
+  [/ш/gi, "sh"],
+  [/ч/gi, "ch"],
+  [/ж/gi, "zh"],
+  [/х/gi, "kh"],
+  [/ц/gi, "ts"],
+  [/я/gi, "ya"],
+  [/ю/gi, "yu"],
+  [/ё/gi, "yo"],
+];
+
+const CYR_TO_LAT_CHAR: Record<string, string> = {
+  а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", з: "z", и: "i", й: "y",
+  к: "k", л: "l", м: "m", н: "n", о: "o", п: "p", р: "r", с: "s", т: "t",
+  у: "u", ф: "f", ы: "y", э: "e", ө: "o", ү: "u", ң: "n", ъ: "", ь: "",
+};
+
+function toLatin(text: string): string {
+  if (!text) return text;
+  let out = text;
+  for (const [pattern, replacement] of CYR_TO_LAT_DIGRAPH) {
+    out = out.replace(pattern, (match) => (match[0] === match[0].toUpperCase() ? replacement[0].toUpperCase() + replacement.slice(1) : replacement));
+  }
+  let result = "";
+  for (const ch of out) {
+    const lower = ch.toLowerCase();
+    const mapped = CYR_TO_LAT_CHAR[lower];
+    if (mapped !== undefined) {
+      result += ch === lower ? mapped : mapped.toUpperCase();
+    } else {
+      result += ch;
+    }
+  }
+  return result;
+}
+
+function normalizeCity(value: string): string {
+  return toCyrillic(value)
+    .toLowerCase()
+    .replace(/ё/g, "е")
+    .replace(/[^а-яёөүңa-z]/gi, "");
+}
+
 const CITY_COORDS: Record<string, [number, number]> = {
   "Кызыл-Кыя": [72.1294, 40.2569],
   "Ош": [72.7985, 40.5283],
@@ -162,30 +206,54 @@ export async function searchNominatim({
   const trimmed = query.trim();
   if (trimmed.length < 1) return [];
 
-  const params = new URLSearchParams({
-    q: trimmed,
-    limit: "12",
-    bbox: KG_BBOX,
-  });
-
   const proximity = CITY_COORDS[city];
-  if (proximity) {
-    params.set("lon", String(proximity[0]));
-    params.set("lat", String(proximity[1]));
-  }
 
-  const response = await fetch(`https://photon.komoot.io/api/?${params.toString()}`, {
-    signal,
-    headers: { Accept: "application/json" },
+  const buildUrl = (q: string) => {
+    const params = new URLSearchParams({
+      q,
+      limit: "20",
+      bbox: KG_BBOX,
+    });
+    if (proximity) {
+      params.set("lon", String(proximity[0]));
+      params.set("lat", String(proximity[1]));
+    }
+    return `https://photon.komoot.io/api/?${params.toString()}`;
+  };
+
+  const queries = new Set<string>();
+  queries.add(trimmed);
+  const latinQuery = toLatin(trimmed);
+  if (latinQuery && latinQuery !== trimmed) queries.add(latinQuery);
+  const cyrQuery = toCyrillic(trimmed);
+  if (cyrQuery && cyrQuery !== trimmed) queries.add(cyrQuery);
+
+  const responses = await Promise.all(
+    Array.from(queries).map(async (q) => {
+      try {
+        const r = await fetch(buildUrl(q), { signal, headers: { Accept: "application/json" } });
+        if (!r.ok) return [] as PhotonFeature[];
+        const json = (await r.json()) as PhotonResponse;
+        return json.features ?? [];
+      } catch (err) {
+        if ((err as Error).name === "AbortError") throw err;
+        return [] as PhotonFeature[];
+      }
+    }),
+  );
+
+  const allFeatures = responses.flat();
+  const seenIds = new Set<string>();
+  const uniqueFeatures = allFeatures.filter((feature) => {
+    const key = `${feature.properties.osm_type}:${feature.properties.osm_id}`;
+    if (seenIds.has(key)) return false;
+    seenIds.add(key);
+    return true;
   });
 
-  if (!response.ok) return [];
+  const normalizedCity = normalizeCity(city);
 
-  const data = (await response.json()) as PhotonResponse;
-
-  const normalizedCity = toCyrillic(city).trim().toLowerCase();
-
-  return data.features
+  return uniqueFeatures
     .filter((feature) => (feature.properties.countrycode ?? "").toUpperCase() === "KG")
     .filter((feature) => {
       if (!normalizedCity) return true;
@@ -196,9 +264,15 @@ export async function searchNominatim({
         feature.properties.county,
       ]
         .filter((value): value is string => Boolean(value))
-        .map((value) => toCyrillic(value).trim().toLowerCase());
-      return candidates.some((value) => value === normalizedCity);
+        .map((value) => normalizeCity(value));
+      return candidates.some(
+        (value) =>
+          value === normalizedCity ||
+          value.includes(normalizedCity) ||
+          normalizedCity.includes(value),
+      );
     })
+    .slice(0, 12)
     .map((feature) => {
       const props = feature.properties;
       const fallbackName = props.name ?? props.street ?? "";
