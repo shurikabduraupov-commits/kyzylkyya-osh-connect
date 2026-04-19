@@ -1,5 +1,5 @@
 export type NominatimSuggestion = {
-  placeId: number;
+  placeId: string;
   displayName: string;
   shortLabel: string;
   category: string;
@@ -8,79 +8,87 @@ export type NominatimSuggestion = {
   lon: string;
 };
 
-type NominatimAddress = {
-  road?: string;
-  pedestrian?: string;
-  footway?: string;
-  cycleway?: string;
-  path?: string;
-  residential?: string;
-  neighbourhood?: string;
-  suburb?: string;
-  village?: string;
-  town?: string;
+type PhotonProperties = {
+  osm_id: number;
+  osm_type: string;
+  osm_key: string;
+  osm_value: string;
+  type?: string;
+  name?: string;
+  street?: string;
+  housenumber?: string;
   city?: string;
-  hamlet?: string;
+  district?: string;
+  locality?: string;
   county?: string;
   state?: string;
-  amenity?: string;
-  shop?: string;
-  building?: string;
-  house_number?: string;
+  country?: string;
+  countrycode?: string;
+  postcode?: string;
 };
 
-type NominatimRawItem = {
-  place_id: number;
-  display_name: string;
-  lat: string;
-  lon: string;
-  class: string;
-  type: string;
-  address?: NominatimAddress;
-  name?: string;
+type PhotonFeature = {
+  type: "Feature";
+  geometry: { type: "Point"; coordinates: [number, number] };
+  properties: PhotonProperties;
 };
 
-function buildShortLabel(item: NominatimRawItem): string {
-  const address = item.address ?? {};
-  const street =
-    address.road ||
-    address.pedestrian ||
-    address.footway ||
-    address.cycleway ||
-    address.path ||
-    address.residential ||
-    "";
+type PhotonResponse = {
+  type: "FeatureCollection";
+  features: PhotonFeature[];
+};
 
-  const place =
-    address.amenity ||
-    address.shop ||
-    address.building ||
-    item.name ||
-    "";
+const KG_BBOX = "69.2,39.1,80.3,43.3";
 
-  const houseNumber = address.house_number || "";
-  const settlement =
-    address.city ||
-    address.town ||
-    address.village ||
-    address.hamlet ||
-    address.suburb ||
-    address.neighbourhood ||
-    "";
+const CITY_COORDS: Record<string, [number, number]> = {
+  "Кызыл-Кыя": [72.1294, 40.2569],
+  "Ош": [72.7985, 40.5283],
+  "Бишкек": [74.5698, 42.8746],
+  "Жалал-Абад": [72.9873, 40.9333],
+  "Каракол": [78.3933, 42.4906],
+  "Талас": [72.2425, 42.5228],
+  "Нарын": [75.9911, 41.4287],
+  "Баткен": [70.8197, 40.0613],
+  "Узген": [73.3008, 40.7692],
+  "Кара-Суу": [72.8675, 40.7042],
+};
 
+function buildShortLabel(props: PhotonProperties, fallbackName: string): string {
   const parts: string[] = [];
+  const street = props.street;
+  const houseNumber = props.housenumber;
+  const placeName = props.name;
+  const settlement = props.city || props.locality || props.district || props.county || "";
 
-  if (place && place !== street) parts.push(place);
   if (street) {
     parts.push(houseNumber ? `${street}, ${houseNumber}` : street);
-  } else if (!place) {
-    const fallback = item.display_name.split(",").slice(0, 2).join(",").trim();
-    if (fallback) parts.push(fallback);
+    if (placeName && placeName !== street) {
+      parts.unshift(placeName);
+    }
+  } else if (placeName) {
+    parts.push(placeName);
+  } else {
+    parts.push(fallbackName);
   }
-  if (settlement) parts.push(settlement);
 
-  const label = parts.join(", ");
-  return label || item.display_name;
+  if (settlement && !parts.some((p) => p.includes(settlement))) {
+    parts.push(settlement);
+  }
+
+  return parts.join(", ");
+}
+
+function buildDisplayName(props: PhotonProperties): string {
+  const segments = [
+    props.name,
+    props.street,
+    props.city || props.locality,
+    props.district,
+    props.county,
+    props.state,
+    props.country,
+  ].filter((value, index, all) => value && all.indexOf(value) === index);
+  return segments.join(", ");
 }
 
 export async function searchNominatim({
@@ -96,32 +104,40 @@ export async function searchNominatim({
   if (trimmed.length < 1) return [];
 
   const params = new URLSearchParams({
-    q: city ? `${trimmed}, ${city}` : trimmed,
-    format: "json",
-    addressdetails: "1",
-    limit: "10",
-    countrycodes: "kg",
-    "accept-language": "ky,ru",
-    dedupe: "1",
+    q: trimmed,
+    limit: "12",
+    bbox: KG_BBOX,
   });
 
-  const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
+  const proximity = CITY_COORDS[city];
+  if (proximity) {
+    params.set("lon", String(proximity[0]));
+    params.set("lat", String(proximity[1]));
+  }
+
+  const response = await fetch(`https://photon.komoot.io/api/?${params.toString()}`, {
     signal,
-    headers: {
-      Accept: "application/json",
-    },
+    headers: { Accept: "application/json" },
   });
 
   if (!response.ok) return [];
 
-  const data = (await response.json()) as NominatimRawItem[];
-  return data.map((item) => ({
-    placeId: item.place_id,
-    displayName: item.display_name,
-    shortLabel: buildShortLabel(item),
-    category: item.class,
-    type: item.type,
-    lat: item.lat,
-    lon: item.lon,
-  }));
+  const data = (await response.json()) as PhotonResponse;
+
+  return data.features
+    .filter((feature) => (feature.properties.countrycode ?? "").toUpperCase() === "KG")
+    .map((feature) => {
+      const props = feature.properties;
+      const fallbackName = props.name ?? props.street ?? "";
+      return {
+        placeId: `${props.osm_type}:${props.osm_id}:${props.osm_key}:${props.osm_value}`,
+        displayName: buildDisplayName(props),
+        shortLabel: buildShortLabel(props, fallbackName),
+        category: props.osm_key,
+        type: props.osm_value,
+        lat: String(feature.geometry.coordinates[1]),
+        lon: String(feature.geometry.coordinates[0]),
+      };
+    })
+    .filter((item) => item.shortLabel.trim().length > 0);
 }
