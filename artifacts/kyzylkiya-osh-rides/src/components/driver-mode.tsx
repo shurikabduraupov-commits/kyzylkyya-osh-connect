@@ -7,10 +7,15 @@ import {
   useListRideRequests,
   useAcceptRideRequest,
   useReleaseRideRequest,
+  useCreateDriverOffer,
+  useCancelDriverOffer,
+  useListDriverOffers,
   getListRideRequestsQueryKey,
   getGetRideStatsQueryKey,
   getListActiveDriversQueryKey,
+  getListDriverOffersQueryKey,
 } from "@workspace/api-client-react";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,6 +30,18 @@ import { SettlementCombobox } from "@/components/settlement-combobox";
 import { useTranslation } from "@/lib/i18n";
 import { readProfile, updateProfile, isProfileComplete } from "@/lib/profile";
 import { Car } from "lucide-react";
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+function toTimeInput(date: Date): string {
+  return `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+}
+function combineDateTime(day: "today" | "tomorrow", time: string): Date {
+  const [h, m] = time.split(":").map((v) => parseInt(v, 10));
+  const d = new Date();
+  if (day === "tomorrow") d.setDate(d.getDate() + 1);
+  d.setHours(h || 0, m || 0, 0, 0);
+  return d;
+}
 
 function formatDepartTime(iso: string): string {
   const d = new Date(iso);
@@ -125,6 +142,140 @@ export function DriverMode() {
       },
     },
   });
+
+  const publishSchema = useMemo(
+    () =>
+      z
+        .object({
+          origin: z.string().min(2, t("driver.publish.origin")),
+          destination: z.string().min(2, t("driver.publish.destination")),
+          seats: z.coerce.number().min(1).max(8),
+          notes: z.string().max(500).optional(),
+          departDay: z.enum(["today", "tomorrow"]),
+          departAfter: z.string().min(1),
+          departBefore: z.string().min(1),
+        })
+        .refine((v) => v.origin !== v.destination, {
+          message: t("passenger.error.same"),
+          path: ["destination"],
+        })
+        .refine(
+          (v) => combineDateTime(v.departDay, v.departBefore).getTime() > combineDateTime(v.departDay, v.departAfter).getTime(),
+          { message: t("passenger.error.depart-order"), path: ["departBefore"] },
+        ),
+    [t],
+  );
+  type PublishValues = z.infer<typeof publishSchema>;
+
+  const defaultPubAfter = useMemo(() => toTimeInput(new Date(Date.now() + 30 * 60 * 1000)), []);
+  const defaultPubBefore = useMemo(() => toTimeInput(new Date(Date.now() + 2 * 60 * 60 * 1000)), []);
+
+  const publishForm = useForm<PublishValues>({
+    resolver: zodResolver(publishSchema),
+    defaultValues: {
+      origin: savedProfile.lastOrigin || "",
+      destination: savedProfile.lastDestination || "",
+      seats: savedProfile.carSeats || 4,
+      notes: "",
+      departDay: "today",
+      departAfter: defaultPubAfter,
+      departBefore: defaultPubBefore,
+    },
+  });
+
+  useEffect(() => {
+    if (Object.keys(publishForm.formState.errors).length > 0) {
+      void publishForm.trigger();
+    }
+  }, [lang, publishForm]);
+
+  const { data: allOffers = [] } = useListDriverOffers({
+    query: {
+      refetchInterval: 10000,
+      queryKey: getListDriverOffersQueryKey(),
+      enabled: !!savedProfile.driverPhone,
+    },
+  });
+  const myOffers = allOffers.filter(
+    (o) => o.driverPhone === savedProfile.driverPhone && !!savedProfile.driverPhone,
+  );
+
+  const createOfferMutation = useCreateDriverOffer({
+    mutation: {
+      onSuccess: () => {
+        toast({
+          title: t("driver.publish.toast.title"),
+          description: t("driver.publish.toast.desc"),
+        });
+        publishForm.reset({
+          origin: publishForm.getValues("origin"),
+          destination: publishForm.getValues("destination"),
+          seats: publishForm.getValues("seats"),
+          notes: "",
+          departDay: "today",
+          departAfter: toTimeInput(new Date(Date.now() + 30 * 60 * 1000)),
+          departBefore: toTimeInput(new Date(Date.now() + 2 * 60 * 60 * 1000)),
+        });
+        queryClient.invalidateQueries({ queryKey: getListDriverOffersQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getListActiveDriversQueryKey() });
+      },
+      onError: () => {
+        toast({
+          title: t("driver.publish.error"),
+          variant: "destructive",
+        });
+      },
+    },
+  });
+
+  const cancelOfferMutation = useCancelDriverOffer({
+    mutation: {
+      onSuccess: () => {
+        toast({
+          title: t("driver.offers.cancelled.title"),
+          description: t("driver.offers.cancelled.desc"),
+        });
+        queryClient.invalidateQueries({ queryKey: getListDriverOffersQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getListActiveDriversQueryKey() });
+      },
+      onError: () => {
+        toast({
+          title: t("driver.offers.cancel.error"),
+          variant: "destructive",
+        });
+      },
+    },
+  });
+
+  const handleCancelOffer = (offerId: string) => {
+    if (!window.confirm(t("driver.offers.cancel.confirm"))) return;
+    cancelOfferMutation.mutate({
+      id: offerId,
+      data: { driverPhone: savedProfile.driverPhone },
+    });
+  };
+
+  const onPublishSubmit = (data: PublishValues) => {
+    const { departDay, departAfter, departBefore, notes, ...rest } = data;
+    updateProfile({ lastOrigin: data.origin, lastDestination: data.destination });
+    createOfferMutation.mutate({
+      data: {
+        ...rest,
+        notes: notes?.trim() ? notes.trim() : undefined,
+        departAfter: combineDateTime(departDay, departAfter).toISOString(),
+        departBefore: combineDateTime(departDay, departBefore).toISOString(),
+        driverName: savedProfile.driverName,
+        driverPhone: savedProfile.driverPhone,
+        driverAge: savedProfile.driverAge!,
+        driverExperience: savedProfile.driverExperience!,
+        carMake: savedProfile.carMake,
+        carYear: savedProfile.carYear!,
+        carPlate: savedProfile.carPlate,
+        carColor: savedProfile.carColor,
+        carSeats: savedProfile.carSeats!,
+      },
+    });
+  };
 
   const handleReleaseClick = (rideId: string) => {
     if (!window.confirm(t("driver.mine.release.confirm"))) return;
@@ -494,6 +645,206 @@ export function DriverMode() {
             {t("driver.profile.change")}
           </Button>
         </div>
+      )}
+
+      <Card className="shadow-sm border-primary/30 bg-primary/5">
+        <CardContent className="p-4 space-y-3">
+          <div>
+            <p className="text-sm font-semibold text-primary">{t("driver.publish.title")}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{t("driver.publish.subtitle")}</p>
+          </div>
+          <Form {...publishForm}>
+            <form onSubmit={publishForm.handleSubmit(onPublishSubmit)} className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <FormField
+                  control={publishForm.control}
+                  name="origin"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">{t("driver.publish.origin")}</FormLabel>
+                      <SettlementCombobox
+                        value={field.value}
+                        onChange={field.onChange}
+                        options={settlements.map((s) => ({ value: s, label: s }))}
+                        placeholder={t("driver.publish.origin")}
+                        className="h-11"
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={publishForm.control}
+                  name="destination"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">{t("driver.publish.destination")}</FormLabel>
+                      <SettlementCombobox
+                        value={field.value}
+                        onChange={field.onChange}
+                        options={settlements.map((s) => ({ value: s, label: s }))}
+                        placeholder={t("driver.publish.destination")}
+                        className="h-11"
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={publishForm.control}
+                name="departDay"
+                render={({ field }) => (
+                  <div className="grid grid-cols-2 gap-2 p-1 bg-muted/50 rounded-lg">
+                    {(["today", "tomorrow"] as const).map((day) => (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() => field.onChange(day)}
+                        className={`h-9 rounded-md text-sm font-medium transition-colors ${
+                          field.value === day
+                            ? "bg-background shadow-sm text-foreground"
+                            : "text-muted-foreground"
+                        }`}
+                      >
+                        {t(day === "today" ? "passenger.depart.today" : "passenger.depart.tomorrow")}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <FormField
+                  control={publishForm.control}
+                  name="departAfter"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">{t("driver.publish.depart-after")}</FormLabel>
+                      <FormControl>
+                        <Input type="time" className="h-11" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={publishForm.control}
+                  name="departBefore"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">{t("driver.publish.depart-before")}</FormLabel>
+                      <FormControl>
+                        <Input type="time" className="h-11" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={publishForm.control}
+                name="seats"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">{t("driver.publish.seats")}</FormLabel>
+                    <Select
+                      onValueChange={(val) => field.onChange(Number(val))}
+                      value={String(field.value)}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="h-11">
+                          <div className="flex items-center gap-2">
+                            <Users className="w-4 h-4 text-muted-foreground" />
+                            <SelectValue />
+                          </div>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+                          <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={publishForm.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">{t("driver.publish.notes")}</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        rows={2}
+                        placeholder={t("driver.publish.notes.placeholder")}
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <Button
+                type="submit"
+                className="w-full h-11 font-semibold"
+                disabled={createOfferMutation.isPending}
+              >
+                {createOfferMutation.isPending ? t("driver.publish.submitting") : t("driver.publish.submit")}
+              </Button>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+
+      {myOffers.length > 0 && (
+        <Card className="shadow-sm border-border">
+          <CardContent className="p-4 space-y-3">
+            <p className="text-sm font-semibold text-foreground">{t("driver.offers.title")}</p>
+            <div className="space-y-2">
+              {myOffers.map((o) => (
+                <div key={o.id} className="rounded-xl border border-border bg-card p-3 space-y-2">
+                  <div className="flex items-center gap-2 text-foreground font-semibold text-sm">
+                    <span>{o.origin}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                    <span>{o.destination}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-3">
+                    <span className="flex items-center gap-1">
+                      <Users className="w-3 h-3" />
+                      {t("passenger.drivers.seats-free", { n: o.seats })}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {formatDepartTime(o.departAfter)}–{formatDepartTime(o.departBefore)}
+                    </span>
+                  </div>
+                  {o.notes && (
+                    <p className="text-xs text-foreground/80 bg-muted/50 rounded-md px-2 py-1.5 leading-snug">
+                      {o.notes}
+                    </p>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => handleCancelOffer(o.id)}
+                    disabled={cancelOfferMutation.isPending}
+                  >
+                    {t("driver.offers.cancel")}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {myAcceptedRides.length > 0 && (

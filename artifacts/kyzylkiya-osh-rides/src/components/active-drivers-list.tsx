@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useListActiveDrivers, getListActiveDriversQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Phone, Car, Users, ArrowRight } from "lucide-react";
+import { Phone, Car, Users, ArrowRight, Clock, Megaphone } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 
 type Props = {
@@ -90,7 +90,32 @@ export function ActiveDriversList({ origin, destination }: Props) {
                       <span className="truncate">{d.destination}</span>
                     </p>
                   </div>
+                  {d.kind === "offer" && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide bg-primary/15 text-primary px-1.5 py-0.5 rounded shrink-0">
+                      <Megaphone className="w-3 h-3" />
+                      {t("passenger.drivers.kind.offer")}
+                    </span>
+                  )}
                 </div>
+
+                {(d.departAfter || d.seats != null) && (
+                  <div className="text-xs text-muted-foreground mt-1.5 flex items-center gap-3">
+                    {d.departAfter && d.departBefore && (
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {new Date(d.departAfter).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        –
+                        {new Date(d.departBefore).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    )}
+                    {d.kind === "offer" && d.seats != null && (
+                      <span className="flex items-center gap-1 text-primary font-medium">
+                        <Users className="w-3 h-3" />
+                        {t("passenger.drivers.seats-free", { n: d.seats })}
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 <div className="mt-2 grid grid-cols-[1fr_auto] gap-2 items-center">
                   <div className="text-sm min-w-0">

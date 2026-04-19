@@ -97,7 +97,17 @@ export interface RideRequest {
   cancelledAt: string | null;
 }
 
+export type ActiveDriverKind =
+  (typeof ActiveDriverKind)[keyof typeof ActiveDriverKind];
+
+export const ActiveDriverKind = {
+  ride: "ride",
+  offer: "offer",
+} as const;
+
 export interface ActiveDriver {
+  kind: ActiveDriverKind;
+  id: string;
   driverName: string;
   driverPhone: string;
   driverAge: number;
@@ -110,7 +120,92 @@ export interface ActiveDriver {
   route: string;
   origin: string;
   destination: string;
+  seats: number | null;
+  departAfter: string | null;
+  departBefore: string | null;
+  notes: string | null;
   lastSeenAt: string;
+}
+
+export interface CreateDriverOffer {
+  /** @minLength 2 */
+  origin: string;
+  /** @minLength 2 */
+  destination: string;
+  /**
+   * @minimum 1
+   * @maximum 8
+   */
+  seats: number;
+  /** @maxLength 500 */
+  notes?: string;
+  departAfter: string;
+  departBefore: string;
+  /** @minLength 2 */
+  driverName: string;
+  /** @minLength 5 */
+  driverPhone: string;
+  /**
+   * @minimum 18
+   * @maximum 80
+   */
+  driverAge: number;
+  /**
+   * @minimum 0
+   * @maximum 60
+   */
+  driverExperience: number;
+  /** @minLength 2 */
+  carMake: string;
+  /**
+   * @minimum 1980
+   * @maximum 2030
+   */
+  carYear: number;
+  /** @minLength 3 */
+  carPlate: string;
+  /** @minLength 2 */
+  carColor: string;
+  /**
+   * @minimum 1
+   * @maximum 8
+   */
+  carSeats: number;
+}
+
+export interface CancelDriverOfferRequest {
+  driverPhone: string;
+}
+
+export type DriverOfferStatus =
+  (typeof DriverOfferStatus)[keyof typeof DriverOfferStatus];
+
+export const DriverOfferStatus = {
+  active: "active",
+  cancelled: "cancelled",
+} as const;
+
+export interface DriverOffer {
+  id: string;
+  origin: string;
+  destination: string;
+  route: string;
+  seats: number;
+  notes: string | null;
+  departAfter: string;
+  departBefore: string;
+  driverName: string;
+  driverPhone: string;
+  driverAge: number;
+  driverExperience: number;
+  carMake: string;
+  carYear: number;
+  carPlate: string;
+  carColor: string;
+  carSeats: number;
+  status: DriverOfferStatus;
+  createdAt: string;
+  cancelledAt: string | null;
 }
 
 export interface RideStats {

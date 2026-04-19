@@ -242,9 +242,11 @@ export const AcceptRideRequestResponse = zod.object({
 });
 
 /**
- * @summary List drivers who recently accepted rides
+ * @summary List drivers who recently accepted rides or published offers
  */
 export const ListActiveDriversResponseItem = zod.object({
+  kind: zod.enum(["ride", "offer"]),
+  id: zod.string(),
   driverName: zod.string(),
   driverPhone: zod.string(),
   driverAge: zod.number(),
@@ -257,11 +259,135 @@ export const ListActiveDriversResponseItem = zod.object({
   route: zod.string(),
   origin: zod.string(),
   destination: zod.string(),
+  seats: zod.number().nullable(),
+  departAfter: zod.coerce.date().nullable(),
+  departBefore: zod.coerce.date().nullable(),
+  notes: zod.string().nullable(),
   lastSeenAt: zod.coerce.date(),
 });
 export const ListActiveDriversResponse = zod.array(
   ListActiveDriversResponseItem,
 );
+
+/**
+ * @summary List active driver offers
+ */
+export const ListDriverOffersResponseItem = zod.object({
+  id: zod.string(),
+  origin: zod.string(),
+  destination: zod.string(),
+  route: zod.string(),
+  seats: zod.number(),
+  notes: zod.string().nullable(),
+  departAfter: zod.coerce.date(),
+  departBefore: zod.coerce.date(),
+  driverName: zod.string(),
+  driverPhone: zod.string(),
+  driverAge: zod.number(),
+  driverExperience: zod.number(),
+  carMake: zod.string(),
+  carYear: zod.number(),
+  carPlate: zod.string(),
+  carColor: zod.string(),
+  carSeats: zod.number(),
+  status: zod.enum(["active", "cancelled"]),
+  createdAt: zod.coerce.date(),
+  cancelledAt: zod.coerce.date().nullable(),
+});
+export const ListDriverOffersResponse = zod.array(ListDriverOffersResponseItem);
+
+/**
+ * @summary Driver publishes a ride offer
+ */
+export const createDriverOfferBodyOriginMin = 2;
+
+export const createDriverOfferBodyDestinationMin = 2;
+
+export const createDriverOfferBodySeatsMax = 8;
+
+export const createDriverOfferBodyNotesMax = 500;
+
+export const createDriverOfferBodyDriverNameMin = 2;
+
+export const createDriverOfferBodyDriverPhoneMin = 5;
+
+export const createDriverOfferBodyDriverAgeMin = 18;
+export const createDriverOfferBodyDriverAgeMax = 80;
+
+export const createDriverOfferBodyDriverExperienceMin = 0;
+export const createDriverOfferBodyDriverExperienceMax = 60;
+
+export const createDriverOfferBodyCarMakeMin = 2;
+
+export const createDriverOfferBodyCarYearMin = 1980;
+export const createDriverOfferBodyCarYearMax = 2030;
+
+export const createDriverOfferBodyCarPlateMin = 3;
+
+export const createDriverOfferBodyCarColorMin = 2;
+
+export const createDriverOfferBodyCarSeatsMax = 8;
+
+export const CreateDriverOfferBody = zod.object({
+  origin: zod.string().min(createDriverOfferBodyOriginMin),
+  destination: zod.string().min(createDriverOfferBodyDestinationMin),
+  seats: zod.number().min(1).max(createDriverOfferBodySeatsMax),
+  notes: zod.string().max(createDriverOfferBodyNotesMax).optional(),
+  departAfter: zod.coerce.date(),
+  departBefore: zod.coerce.date(),
+  driverName: zod.string().min(createDriverOfferBodyDriverNameMin),
+  driverPhone: zod.string().min(createDriverOfferBodyDriverPhoneMin),
+  driverAge: zod
+    .number()
+    .min(createDriverOfferBodyDriverAgeMin)
+    .max(createDriverOfferBodyDriverAgeMax),
+  driverExperience: zod
+    .number()
+    .min(createDriverOfferBodyDriverExperienceMin)
+    .max(createDriverOfferBodyDriverExperienceMax),
+  carMake: zod.string().min(createDriverOfferBodyCarMakeMin),
+  carYear: zod
+    .number()
+    .min(createDriverOfferBodyCarYearMin)
+    .max(createDriverOfferBodyCarYearMax),
+  carPlate: zod.string().min(createDriverOfferBodyCarPlateMin),
+  carColor: zod.string().min(createDriverOfferBodyCarColorMin),
+  carSeats: zod.number().min(1).max(createDriverOfferBodyCarSeatsMax),
+});
+
+/**
+ * @summary Driver cancels their offer
+ */
+export const CancelDriverOfferParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const CancelDriverOfferBody = zod.object({
+  driverPhone: zod.string(),
+});
+
+export const CancelDriverOfferResponse = zod.object({
+  id: zod.string(),
+  origin: zod.string(),
+  destination: zod.string(),
+  route: zod.string(),
+  seats: zod.number(),
+  notes: zod.string().nullable(),
+  departAfter: zod.coerce.date(),
+  departBefore: zod.coerce.date(),
+  driverName: zod.string(),
+  driverPhone: zod.string(),
+  driverAge: zod.number(),
+  driverExperience: zod.number(),
+  carMake: zod.string(),
+  carYear: zod.number(),
+  carPlate: zod.string(),
+  carColor: zod.string(),
+  carSeats: zod.number(),
+  status: zod.enum(["active", "cancelled"]),
+  createdAt: zod.coerce.date(),
+  cancelledAt: zod.coerce.date().nullable(),
+});
 
 /**
  * @summary Small dashboard summary

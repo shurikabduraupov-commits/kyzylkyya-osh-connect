@@ -8,7 +8,12 @@
 
 export * from "./acceptRideRequest";
 export * from "./activeDriver";
+export * from "./activeDriverKind";
+export * from "./cancelDriverOfferRequest";
+export * from "./createDriverOffer";
 export * from "./createRideRequest";
+export * from "./driverOffer";
+export * from "./driverOfferStatus";
 export * from "./healthStatus";
 export * from "./releaseRideRequest";
 export * from "./rideRequest";

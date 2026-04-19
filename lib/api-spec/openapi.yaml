@@ -159,7 +159,7 @@ paths:
     get:
       operationId: listActiveDrivers
       tags: [rides]
-      summary: List drivers who recently accepted rides
+      summary: List drivers who recently accepted rides or published offers
       responses:
         "200":
           description: Active drivers
@@ -169,6 +169,65 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/ActiveDriver"
+  /offers:
+    get:
+      operationId: listDriverOffers
+      tags: [rides]
+      summary: List active driver offers
+      responses:
+        "200":
+          description: Active driver offers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DriverOffer"
+    post:
+      operationId: createDriverOffer
+      tags: [rides]
+      summary: Driver publishes a ride offer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDriverOffer"
+      responses:
+        "201":
+          description: Created offer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DriverOffer"
+  /offers/{id}/cancel:
+    post:
+      operationId: cancelDriverOffer
+      tags: [rides]
+      summary: Driver cancels their offer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CancelDriverOfferRequest"
+      responses:
+        "200":
+          description: Cancelled offer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DriverOffer"
+        "403":
+          description: Driver phone does not match
+        "404":
+          description: Offer not found
   /stats:
     get:
       operationId: getRideStats
@@ -366,6 +425,11 @@ components:
     ActiveDriver:
       type: object
       properties:
+        kind:
+          type: string
+          enum: [ride, offer]
+        id:
+          type: string
         driverName:
           type: string
         driverPhone:
@@ -390,10 +454,26 @@ components:
           type: string
         destination:
           type: string
+        seats:
+          type: integer
+          nullable: true
+        departAfter:
+          type: string
+          format: date-time
+          nullable: true
+        departBefore:
+          type: string
+          format: date-time
+          nullable: true
+        notes:
+          type: string
+          nullable: true
         lastSeenAt:
           type: string
           format: date-time
       required:
+        - kind
+        - id
         - driverName
         - driverPhone
         - driverAge
@@ -406,7 +486,157 @@ components:
         - route
         - origin
         - destination
+        - seats
+        - departAfter
+        - departBefore
+        - notes
         - lastSeenAt
+    CreateDriverOffer:
+      type: object
+      properties:
+        origin:
+          type: string
+          minLength: 2
+        destination:
+          type: string
+          minLength: 2
+        seats:
+          type: integer
+          minimum: 1
+          maximum: 8
+        notes:
+          type: string
+          maxLength: 500
+        departAfter:
+          type: string
+          format: date-time
+        departBefore:
+          type: string
+          format: date-time
+        driverName:
+          type: string
+          minLength: 2
+        driverPhone:
+          type: string
+          minLength: 5
+        driverAge:
+          type: integer
+          minimum: 18
+          maximum: 80
+        driverExperience:
+          type: integer
+          minimum: 0
+          maximum: 60
+        carMake:
+          type: string
+          minLength: 2
+        carYear:
+          type: integer
+          minimum: 1980
+          maximum: 2030
+        carPlate:
+          type: string
+          minLength: 3
+        carColor:
+          type: string
+          minLength: 2
+        carSeats:
+          type: integer
+          minimum: 1
+          maximum: 8
+      required:
+        - origin
+        - destination
+        - seats
+        - departAfter
+        - departBefore
+        - driverName
+        - driverPhone
+        - driverAge
+        - driverExperience
+        - carMake
+        - carYear
+        - carPlate
+        - carColor
+        - carSeats
+    CancelDriverOfferRequest:
+      type: object
+      properties:
+        driverPhone:
+          type: string
+      required:
+        - driverPhone
+    DriverOffer:
+      type: object
+      properties:
+        id:
+          type: string
+        origin:
+          type: string
+        destination:
+          type: string
+        route:
+          type: string
+        seats:
+          type: integer
+        notes:
+          type: string
+          nullable: true
+        departAfter:
+          type: string
+          format: date-time
+        departBefore:
+          type: string
+          format: date-time
+        driverName:
+          type: string
+        driverPhone:
+          type: string
+        driverAge:
+          type: integer
+        driverExperience:
+          type: integer
+        carMake:
+          type: string
+        carYear:
+          type: integer
+        carPlate:
+          type: string
+        carColor:
+          type: string
+        carSeats:
+          type: integer
+        status:
+          type: string
+          enum: [active, cancelled]
+        createdAt:
+          type: string
+          format: date-time
+        cancelledAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - id
+        - origin
+        - destination
+        - route
+        - seats
+        - notes
+        - departAfter
+        - departBefore
+        - driverName
+        - driverPhone
+        - driverAge
+        - driverExperience
+        - carMake
+        - carYear
+        - carPlate
+        - carColor
+        - carSeats
+        - status
+        - createdAt
+        - cancelledAt
     RideStats:
       type: object
       properties:

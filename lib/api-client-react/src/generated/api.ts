@@ -19,7 +19,10 @@ import type {
 import type {
   AcceptRideRequest,
   ActiveDriver,
+  CancelDriverOfferRequest,
+  CreateDriverOffer,
   CreateRideRequest,
+  DriverOffer,
   HealthStatus,
   ReleaseRideRequest,
   RideRequest,
@@ -618,7 +621,7 @@ export const useAcceptRideRequest = <
 };
 
 /**
- * @summary List drivers who recently accepted rides
+ * @summary List drivers who recently accepted rides or published offers
  */
 export const getListActiveDriversUrl = () => {
   return `/rides-api/drivers`;
@@ -669,7 +672,7 @@ export type ListActiveDriversQueryResult = NonNullable<
 export type ListActiveDriversQueryError = ErrorType<unknown>;
 
 /**
- * @summary List drivers who recently accepted rides
+ * @summary List drivers who recently accepted rides or published offers
  */
 
 export function useListActiveDrivers<
@@ -691,6 +694,254 @@ export function useListActiveDrivers<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary List active driver offers
+ */
+export const getListDriverOffersUrl = () => {
+  return `/rides-api/offers`;
+};
+
+export const listDriverOffers = async (
+  options?: RequestInit,
+): Promise<DriverOffer[]> => {
+  return customFetch<DriverOffer[]>(getListDriverOffersUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListDriverOffersQueryKey = () => {
+  return [`/rides-api/offers`] as const;
+};
+
+export const getListDriverOffersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listDriverOffers>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listDriverOffers>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListDriverOffersQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listDriverOffers>>
+  > = ({ signal }) => listDriverOffers({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listDriverOffers>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListDriverOffersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listDriverOffers>>
+>;
+export type ListDriverOffersQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List active driver offers
+ */
+
+export function useListDriverOffers<
+  TData = Awaited<ReturnType<typeof listDriverOffers>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listDriverOffers>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListDriverOffersQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Driver publishes a ride offer
+ */
+export const getCreateDriverOfferUrl = () => {
+  return `/rides-api/offers`;
+};
+
+export const createDriverOffer = async (
+  createDriverOffer: CreateDriverOffer,
+  options?: RequestInit,
+): Promise<DriverOffer> => {
+  return customFetch<DriverOffer>(getCreateDriverOfferUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createDriverOffer),
+  });
+};
+
+export const getCreateDriverOfferMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createDriverOffer>>,
+    TError,
+    { data: BodyType<CreateDriverOffer> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createDriverOffer>>,
+  TError,
+  { data: BodyType<CreateDriverOffer> },
+  TContext
+> => {
+  const mutationKey = ["createDriverOffer"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createDriverOffer>>,
+    { data: BodyType<CreateDriverOffer> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createDriverOffer(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateDriverOfferMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createDriverOffer>>
+>;
+export type CreateDriverOfferMutationBody = BodyType<CreateDriverOffer>;
+export type CreateDriverOfferMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Driver publishes a ride offer
+ */
+export const useCreateDriverOffer = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createDriverOffer>>,
+    TError,
+    { data: BodyType<CreateDriverOffer> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createDriverOffer>>,
+  TError,
+  { data: BodyType<CreateDriverOffer> },
+  TContext
+> => {
+  return useMutation(getCreateDriverOfferMutationOptions(options));
+};
+
+/**
+ * @summary Driver cancels their offer
+ */
+export const getCancelDriverOfferUrl = (id: string) => {
+  return `/rides-api/offers/${id}/cancel`;
+};
+
+export const cancelDriverOffer = async (
+  id: string,
+  cancelDriverOfferRequest: CancelDriverOfferRequest,
+  options?: RequestInit,
+): Promise<DriverOffer> => {
+  return customFetch<DriverOffer>(getCancelDriverOfferUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(cancelDriverOfferRequest),
+  });
+};
+
+export const getCancelDriverOfferMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelDriverOffer>>,
+    TError,
+    { id: string; data: BodyType<CancelDriverOfferRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof cancelDriverOffer>>,
+  TError,
+  { id: string; data: BodyType<CancelDriverOfferRequest> },
+  TContext
+> => {
+  const mutationKey = ["cancelDriverOffer"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof cancelDriverOffer>>,
+    { id: string; data: BodyType<CancelDriverOfferRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return cancelDriverOffer(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CancelDriverOfferMutationResult = NonNullable<
+  Awaited<ReturnType<typeof cancelDriverOffer>>
+>;
+export type CancelDriverOfferMutationBody = BodyType<CancelDriverOfferRequest>;
+export type CancelDriverOfferMutationError = ErrorType<void>;
+
+/**
+ * @summary Driver cancels their offer
+ */
+export const useCancelDriverOffer = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelDriverOffer>>,
+    TError,
+    { id: string; data: BodyType<CancelDriverOfferRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof cancelDriverOffer>>,
+  TError,
+  { id: string; data: BodyType<CancelDriverOfferRequest> },
+  TContext
+> => {
+  return useMutation(getCancelDriverOfferMutationOptions(options));
+};
 
 /**
  * @summary Small dashboard summary

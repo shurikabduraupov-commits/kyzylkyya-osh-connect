@@ -5,11 +5,17 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { ActiveDriverKind } from "./activeDriverKind";
+import type { DriverOfferStatus } from "./driverOfferStatus";
 
-export interface ActiveDriver {
-  kind: ActiveDriverKind;
+export interface DriverOffer {
   id: string;
+  origin: string;
+  destination: string;
+  route: string;
+  seats: number;
+  notes: string | null;
+  departAfter: Date;
+  departBefore: Date;
   driverName: string;
   driverPhone: string;
   driverAge: number;
@@ -19,12 +25,7 @@ export interface ActiveDriver {
   carPlate: string;
   carColor: string;
   carSeats: number;
-  route: string;
-  origin: string;
-  destination: string;
-  seats: number | null;
-  departAfter: Date | null;
-  departBefore: Date | null;
-  notes: string | null;
-  lastSeenAt: Date;
+  status: DriverOfferStatus;
+  createdAt: Date;
+  cancelledAt: Date | null;
 }

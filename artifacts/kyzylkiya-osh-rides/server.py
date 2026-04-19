@@ -6,6 +6,7 @@ import os
 import uuid
 
 requests_store = []
+offers_store = []
 
 SETTLEMENTS_FILE = os.path.join(os.path.dirname(__file__), "custom_settlements.json")
 ADMIN_TOKEN = os.environ.get("MAK_ADMIN_TOKEN", "mak-admin-2026")
@@ -89,18 +90,15 @@ class RideHandler(BaseHTTPRequestHandler):
             self._send_json(200, custom_settlements)
             return
         if parts == ["drivers"]:
-            accepted = [item for item in requests_store if item["status"] == "accepted" and item.get("driverPhone")]
-            accepted.sort(key=lambda r: r.get("acceptedAt") or "", reverse=True)
-            seen = set()
-            drivers = []
-            for ride in accepted:
-                phone = ride.get("driverPhone")
-                if phone in seen:
+            entries = []
+            for ride in requests_store:
+                if ride["status"] != "accepted" or not ride.get("driverPhone"):
                     continue
-                seen.add(phone)
-                drivers.append({
+                entries.append({
+                    "kind": "ride",
+                    "id": ride["id"],
                     "driverName": ride.get("driverName"),
-                    "driverPhone": phone,
+                    "driverPhone": ride.get("driverPhone"),
                     "driverAge": ride.get("driverAge"),
                     "driverExperience": ride.get("driverExperience"),
                     "carMake": ride.get("carMake"),
@@ -111,9 +109,51 @@ class RideHandler(BaseHTTPRequestHandler):
                     "route": ride.get("route"),
                     "origin": ride.get("origin"),
                     "destination": ride.get("destination"),
+                    "seats": ride.get("seats"),
+                    "departAfter": ride.get("departAfter"),
+                    "departBefore": ride.get("departBefore"),
+                    "notes": ride.get("notes"),
                     "lastSeenAt": ride.get("acceptedAt"),
                 })
+            for offer in offers_store:
+                if offer["status"] != "active":
+                    continue
+                entries.append({
+                    "kind": "offer",
+                    "id": offer["id"],
+                    "driverName": offer.get("driverName"),
+                    "driverPhone": offer.get("driverPhone"),
+                    "driverAge": offer.get("driverAge"),
+                    "driverExperience": offer.get("driverExperience"),
+                    "carMake": offer.get("carMake"),
+                    "carYear": offer.get("carYear"),
+                    "carPlate": offer.get("carPlate"),
+                    "carColor": offer.get("carColor"),
+                    "carSeats": offer.get("carSeats"),
+                    "route": offer.get("route"),
+                    "origin": offer.get("origin"),
+                    "destination": offer.get("destination"),
+                    "seats": offer.get("seats"),
+                    "departAfter": offer.get("departAfter"),
+                    "departBefore": offer.get("departBefore"),
+                    "notes": offer.get("notes"),
+                    "lastSeenAt": offer.get("createdAt"),
+                })
+            entries.sort(key=lambda r: r.get("lastSeenAt") or "", reverse=True)
+            seen = set()
+            drivers = []
+            for entry in entries:
+                phone = entry.get("driverPhone")
+                if phone in seen:
+                    continue
+                seen.add(phone)
+                drivers.append(entry)
             self._send_json(200, drivers)
+            return
+        if parts == ["offers"]:
+            offers = [o for o in offers_store if o["status"] == "active"]
+            offers.sort(key=lambda r: r.get("createdAt") or "", reverse=True)
+            self._send_json(200, offers)
             return
         if parts == ["stats"]:
             active = [item for item in requests_store if item["status"] == "active"]
@@ -206,6 +246,119 @@ class RideHandler(BaseHTTPRequestHandler):
             }
             requests_store.insert(0, ride)
             self._send_json(201, ride)
+            return
+        if parts == ["offers"]:
+            origin = str(data.get("origin", "")).strip()
+            destination = str(data.get("destination", "")).strip()
+            notes = str(data.get("notes", "")).strip()
+            if len(notes) > 500:
+                notes = notes[:500]
+            seats = data.get("seats")
+            try:
+                seats_number = int(seats)
+            except (TypeError, ValueError):
+                self._send_json(400, {"message": "Орундардын санын жазыңыз"})
+                return
+            depart_after = str(data.get("departAfter", "")).strip()
+            depart_before = str(data.get("departBefore", "")).strip()
+
+            def _parse_iso(value):
+                if not value:
+                    return None
+                try:
+                    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+                except ValueError:
+                    return None
+
+            after_dt = _parse_iso(depart_after)
+            before_dt = _parse_iso(depart_before)
+            if after_dt is None or before_dt is None:
+                self._send_json(400, {"message": "Чыгуу убактысын тандаңыз"})
+                return
+            if before_dt <= after_dt:
+                self._send_json(400, {"message": "«Чейин» убактысы «дан»дан кеч болушу керек"})
+                return
+            if len(origin) < 2 or len(destination) < 2 or origin == destination:
+                self._send_json(400, {"message": "Маршрутту туура тандаңыз"})
+                return
+            if seats_number < 1 or seats_number > 8:
+                self._send_json(400, {"message": "Бош орундардын саны 1ден 8ге чейин"})
+                return
+
+            driver_name = str(data.get("driverName", "")).strip()
+            driver_phone = str(data.get("driverPhone", "")).strip()
+            car_make = str(data.get("carMake", "")).strip()
+            car_plate = str(data.get("carPlate", "")).strip()
+            car_color = str(data.get("carColor", "")).strip()
+
+            def _to_int(value):
+                try:
+                    return int(value)
+                except (TypeError, ValueError):
+                    return None
+
+            driver_age = _to_int(data.get("driverAge"))
+            driver_exp = _to_int(data.get("driverExperience"))
+            car_year = _to_int(data.get("carYear"))
+            car_seats = _to_int(data.get("carSeats"))
+
+            if (
+                len(driver_name) < 2
+                or len(driver_phone) < 5
+                or driver_age is None
+                or driver_exp is None
+                or len(car_make) < 2
+                or car_year is None
+                or len(car_plate) < 3
+                or len(car_color) < 2
+                or car_seats is None
+            ):
+                self._send_json(400, {"message": "Алгач профилди толтуруңуз"})
+                return
+
+            for existing in offers_store:
+                if existing["status"] == "active" and existing.get("driverPhone") == driver_phone and existing.get("origin") == origin and existing.get("destination") == destination:
+                    existing["status"] = "cancelled"
+                    existing["cancelledAt"] = now_iso()
+
+            offer = {
+                "id": uuid.uuid4().hex,
+                "origin": origin,
+                "destination": destination,
+                "route": make_route(origin, destination),
+                "seats": seats_number,
+                "notes": notes or None,
+                "departAfter": after_dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
+                "departBefore": before_dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
+                "driverName": driver_name,
+                "driverPhone": driver_phone,
+                "driverAge": driver_age,
+                "driverExperience": driver_exp,
+                "carMake": car_make,
+                "carYear": car_year,
+                "carPlate": car_plate,
+                "carColor": car_color,
+                "carSeats": car_seats,
+                "status": "active",
+                "createdAt": now_iso(),
+                "cancelledAt": None,
+            }
+            offers_store.insert(0, offer)
+            self._send_json(201, offer)
+            return
+        if len(parts) == 3 and parts[0] == "offers" and parts[2] == "cancel":
+            offer = next((o for o in offers_store if o["id"] == parts[1]), None)
+            if offer is None:
+                self._send_json(404, {"message": "Объявление табылган жок"})
+                return
+            driver_phone = str(data.get("driverPhone", "")).strip()
+            if driver_phone and offer.get("driverPhone") and driver_phone != offer["driverPhone"]:
+                self._send_json(403, {"message": "Бул объявление башка айдоочуга таандык"})
+                return
+            if offer["status"] == "active":
+                offer["status"] = "cancelled"
+                offer["cancelledAt"] = now_iso()
+            self._send_json(200, offer)
             return
         if parts == ["settlements"]:
             token = self.headers.get("X-Admin-Token", "")
