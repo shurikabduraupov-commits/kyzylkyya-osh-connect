@@ -55,7 +55,7 @@ class RideHandler(BaseHTTPRequestHandler):
         if len(parts) == 2 and parts[0] == "requests":
             ride = next((item for item in requests_store if item["id"] == parts[1]), None)
             if ride is None:
-                self._send_json(404, {"message": "Заявка не найдена"})
+                self._send_json(404, {"message": "Заявка табылган жок"})
                 return
             self._send_json(200, ride)
             return
@@ -68,14 +68,14 @@ class RideHandler(BaseHTTPRequestHandler):
                 "totalSeats": sum(int(item["seats"]) for item in active),
             })
             return
-        self._send_json(404, {"message": "Маршрут не найден"})
+        self._send_json(404, {"message": "Маршрут табылган жок"})
 
     def do_POST(self):
         parts = self._path_parts()
         try:
             data = self._read_json()
         except json.JSONDecodeError:
-            self._send_json(400, {"message": "Некорректный JSON"})
+            self._send_json(400, {"message": "JSON туура эмес"})
             return
         if parts == ["requests"]:
             pickup_address = str(data.get("pickupAddress", "")).strip()
@@ -83,19 +83,19 @@ class RideHandler(BaseHTTPRequestHandler):
             try:
                 seats_number = int(seats)
             except (TypeError, ValueError):
-                self._send_json(400, {"message": "Укажите количество мест"})
+                self._send_json(400, {"message": "Орундардын санын жазыңыз"})
                 return
             if len(pickup_address) < 3:
-                self._send_json(400, {"message": "Укажите адрес в Кызыл-Кие"})
+                self._send_json(400, {"message": "Кызыл-Кыядагы даректи жазыңыз"})
                 return
             if seats_number < 1 or seats_number > 7:
-                self._send_json(400, {"message": "Количество мест должно быть от 1 до 7"})
+                self._send_json(400, {"message": "Орундардын саны 1ден 7ге чейин болушу керек"})
                 return
             ride = {
                 "id": uuid.uuid4().hex,
                 "pickupAddress": pickup_address,
                 "seats": seats_number,
-                "route": "Кызыл-Кия → Ош",
+                "route": "Кызыл-Кыя → Ош",
                 "status": "active",
                 "driverName": None,
                 "driverPhone": None,
@@ -108,18 +108,18 @@ class RideHandler(BaseHTTPRequestHandler):
         if len(parts) == 3 and parts[0] == "requests" and parts[2] == "accept":
             ride = next((item for item in requests_store if item["id"] == parts[1]), None)
             if ride is None:
-                self._send_json(404, {"message": "Заявка не найдена"})
+                self._send_json(404, {"message": "Заявка табылган жок"})
                 return
             if ride["status"] != "active":
-                self._send_json(409, {"message": "Заказ уже принят"})
+                self._send_json(409, {"message": "Заказ буга чейин кабыл алынган"})
                 return
             driver_name = str(data.get("driverName", "")).strip()
             driver_phone = str(data.get("driverPhone", "")).strip()
             if len(driver_name) < 2:
-                self._send_json(400, {"message": "Укажите имя водителя"})
+                self._send_json(400, {"message": "Айдоочунун атын жазыңыз"})
                 return
             if len(driver_phone) < 5:
-                self._send_json(400, {"message": "Укажите телефон водителя"})
+                self._send_json(400, {"message": "Айдоочунун телефонун жазыңыз"})
                 return
             ride["status"] = "accepted"
             ride["driverName"] = driver_name
@@ -127,7 +127,7 @@ class RideHandler(BaseHTTPRequestHandler):
             ride["acceptedAt"] = now_iso()
             self._send_json(200, ride)
             return
-        self._send_json(404, {"message": "Маршрут не найден"})
+        self._send_json(404, {"message": "Маршрут табылган жок"})
 
 
 if __name__ == "__main__":

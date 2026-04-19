@@ -25,12 +25,12 @@ router.post("/requests", (req, res) => {
   const seats = Number(req.body?.seats);
 
   if (pickupAddress.length < 3) {
-    res.status(400).json({ message: "Укажите адрес в Кызыл-Кие" });
+    res.status(400).json({ message: "Кызыл-Кыядагы даректи жазыңыз" });
     return;
   }
 
   if (!Number.isInteger(seats) || seats < 1 || seats > 7) {
-    res.status(400).json({ message: "Количество мест должно быть от 1 до 7" });
+    res.status(400).json({ message: "Орундардын саны 1ден 7ге чейин болушу керек" });
     return;
   }
 
@@ -38,7 +38,7 @@ router.post("/requests", (req, res) => {
     id: randomUUID().replaceAll("-", ""),
     pickupAddress,
     seats,
-    route: "Кызыл-Кия → Ош",
+    route: "Кызыл-Кыя → Ош",
     status: "active",
     driverName: null,
     driverPhone: null,
@@ -54,7 +54,7 @@ router.get("/requests/:id", (req, res) => {
   const ride = requests.find((request) => request.id === req.params.id);
 
   if (!ride) {
-    res.status(404).json({ message: "Заявка не найдена" });
+    res.status(404).json({ message: "Заявка табылган жок" });
     return;
   }
 
@@ -65,12 +65,12 @@ router.post("/requests/:id/accept", (req, res) => {
   const ride = requests.find((request) => request.id === req.params.id);
 
   if (!ride) {
-    res.status(404).json({ message: "Заявка не найдена" });
+    res.status(404).json({ message: "Заявка табылган жок" });
     return;
   }
 
   if (ride.status !== "active") {
-    res.status(409).json({ message: "Заказ уже принят" });
+    res.status(409).json({ message: "Заказ буга чейин кабыл алынган" });
     return;
   }
 
@@ -78,12 +78,12 @@ router.post("/requests/:id/accept", (req, res) => {
   const driverPhone = String(req.body?.driverPhone ?? "").trim();
 
   if (driverName.length < 2) {
-    res.status(400).json({ message: "Укажите имя водителя" });
+    res.status(400).json({ message: "Айдоочунун атын жазыңыз" });
     return;
   }
 
   if (driverPhone.length < 5) {
-    res.status(400).json({ message: "Укажите телефон водителя" });
+    res.status(400).json({ message: "Айдоочунун телефонун жазыңыз" });
     return;
   }
 
