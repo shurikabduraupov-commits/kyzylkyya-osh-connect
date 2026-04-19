@@ -7,6 +7,28 @@ import uuid
 
 requests_store = []
 
+SETTLEMENTS_FILE = os.path.join(os.path.dirname(__file__), "custom_settlements.json")
+ADMIN_TOKEN = os.environ.get("MAK_ADMIN_TOKEN", "mak-admin-2026")
+
+
+def _load_custom_settlements():
+    try:
+        with open(SETTLEMENTS_FILE, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+            if isinstance(data, list):
+                return [str(x) for x in data if isinstance(x, str)]
+    except (FileNotFoundError, json.JSONDecodeError):
+        pass
+    return []
+
+
+def _save_custom_settlements(items):
+    with open(SETTLEMENTS_FILE, "w", encoding="utf-8") as fh:
+        json.dump(items, fh, ensure_ascii=False, indent=2)
+
+
+custom_settlements = _load_custom_settlements()
+
 
 def now_iso():
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
@@ -27,7 +49,7 @@ class RideHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Admin-Token")
         self.end_headers()
         self.wfile.write(body)
 
@@ -62,6 +84,9 @@ class RideHandler(BaseHTTPRequestHandler):
                 self._send_json(404, {"message": "Заявка табылган жок"})
                 return
             self._send_json(200, ride)
+            return
+        if parts == ["settlements"]:
+            self._send_json(200, custom_settlements)
             return
         if parts == ["stats"]:
             active = [item for item in requests_store if item["status"] == "active"]
@@ -146,6 +171,23 @@ class RideHandler(BaseHTTPRequestHandler):
             }
             requests_store.insert(0, ride)
             self._send_json(201, ride)
+            return
+        if parts == ["settlements"]:
+            token = self.headers.get("X-Admin-Token", "")
+            if token != ADMIN_TOKEN:
+                self._send_json(403, {"message": "Уруксат жок"})
+                return
+            name = str(data.get("name", "")).strip()
+            if len(name) < 2:
+                self._send_json(400, {"message": "Аталышы кыска"})
+                return
+            existing = {s.lower() for s in custom_settlements}
+            if name.lower() in existing:
+                self._send_json(200, custom_settlements)
+                return
+            custom_settlements.append(name)
+            _save_custom_settlements(custom_settlements)
+            self._send_json(201, custom_settlements)
             return
         if len(parts) == 3 and parts[0] == "requests" and parts[2] == "accept":
             ride = next((item for item in requests_store if item["id"] == parts[1]), None)

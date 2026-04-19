@@ -3,6 +3,7 @@ import { KYRGYZSTAN_SETTLEMENTS } from "@/lib/settlements";
 
 const STORAGE_KEY = "mak.kg.settlements.v2";
 const CUSTOM_KEY = "mak.kg.settlements.custom.v1";
+const ADMIN_TOKEN_KEY = "mak.admin.token";
 const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
 function readCustom(): string[] {
@@ -26,13 +27,69 @@ function writeCustom(list: string[]): void {
 
 const customListeners = new Set<() => void>();
 
-export function addCustomSettlement(name: string): void {
+export function getAdminToken(): string | null {
+  try {
+    return localStorage.getItem(ADMIN_TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function isAdmin(): boolean {
+  return !!getAdminToken();
+}
+
+export function setAdminToken(token: string): void {
+  try {
+    localStorage.setItem(ADMIN_TOKEN_KEY, token);
+  } catch {
+    // ignore
+  }
+}
+
+export function clearAdminToken(): void {
+  try {
+    localStorage.removeItem(ADMIN_TOKEN_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+export async function addCustomSettlement(name: string): Promise<boolean> {
   const trimmed = name.trim();
-  if (trimmed.length < 2) return;
-  const current = readCustom();
-  if (current.some((s) => s.toLowerCase() === trimmed.toLowerCase())) return;
-  writeCustom([...current, trimmed]);
-  customListeners.forEach((fn) => fn());
+  if (trimmed.length < 2) return false;
+  const token = getAdminToken();
+  if (!token) return false;
+  try {
+    const res = await fetch("/rides-api/settlements", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Admin-Token": token,
+      },
+      body: JSON.stringify({ name: trimmed }),
+    });
+    if (!res.ok) return false;
+    const list = (await res.json()) as string[];
+    writeCustom(list);
+    customListeners.forEach((fn) => fn());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function fetchCustomFromServer(signal?: AbortSignal): Promise<string[] | null> {
+  try {
+    const res = await fetch("/rides-api/settlements", { signal });
+    if (!res.ok) return null;
+    const list = (await res.json()) as string[];
+    if (!Array.isArray(list)) return null;
+    writeCustom(list);
+    return list;
+  } catch {
+    return null;
+  }
 }
 
 type CachePayload = {
@@ -214,6 +271,11 @@ export function useAllSettlements(): string[] {
     };
     customListeners.add(refresh);
 
+    const customController = new AbortController();
+    fetchCustomFromServer(customController.signal).then((list) => {
+      if (list && !customController.signal.aborted) refresh();
+    });
+
     let controller: AbortController | null = null;
     if (!cachedList || cachedList.length <= KYRGYZSTAN_SETTLEMENTS.length) {
       const fromStorage = readCache();
@@ -242,6 +304,7 @@ export function useAllSettlements(): string[] {
     return () => {
       customListeners.delete(refresh);
       controller?.abort();
+      customController.abort();
     };
   }, []);
 

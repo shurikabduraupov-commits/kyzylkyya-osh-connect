@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useTranslation } from "@/lib/i18n";
-import { addCustomSettlement } from "@/lib/all-settlements";
+import { addCustomSettlement, isAdmin } from "@/lib/all-settlements";
 
 type Option = { value: string; label: string };
 
@@ -47,13 +47,15 @@ export function SettlementCombobox({
     (o) => o.label.toLowerCase() === trimmedSearch.toLowerCase(),
   );
   const showAddButton =
-    allowCustom && trimmedSearch.length >= 2 && !hasExactMatch;
+    allowCustom && isAdmin() && trimmedSearch.length >= 2 && !hasExactMatch;
 
-  const handleAdd = () => {
-    addCustomSettlement(trimmedSearch);
-    onChange(trimmedSearch);
-    setSearch("");
-    setOpen(false);
+  const handleAdd = async () => {
+    const ok = await addCustomSettlement(trimmedSearch);
+    if (ok) {
+      onChange(trimmedSearch);
+      setSearch("");
+      setOpen(false);
+    }
   };
 
   return (
