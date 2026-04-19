@@ -25,7 +25,10 @@ export function Home() {
               <div className="bg-white/20 p-2 rounded-xl backdrop-blur-sm">
                 <Map className="w-6 h-6 text-white" />
               </div>
-              <h1 className="font-display text-2xl font-bold tracking-tight">Жол<span className="opacity-80">Тап</span></h1>
+              <div>
+                <h1 className="font-display text-2xl font-bold tracking-tight leading-none">МАК</h1>
+                <p className="text-[11px] uppercase tracking-wider opacity-80 leading-tight">Мени Алып Кет</p>
+              </div>
             </div>
 
             {stats && (
