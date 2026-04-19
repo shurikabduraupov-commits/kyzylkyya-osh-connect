@@ -122,7 +122,22 @@ export function AddressAutocomplete({ value, onChange, city, placeholder, id }: 
           )}
 
           {!loading && !error && suggestions.length === 0 && value.trim().length >= 1 && (
-            <div className="px-4 py-3 text-sm text-muted-foreground">{t("address.empty")}</div>
+            <div className="px-4 py-3 space-y-2">
+              <p className="text-sm text-muted-foreground">{t("address.empty")}</p>
+              <button
+                type="button"
+                className="w-full text-left px-3 py-2 rounded-md bg-accent hover:bg-accent/80 transition-colors flex items-center gap-2"
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  setOpen(false);
+                }}
+              >
+                <MapPin className="w-4 h-4 text-primary shrink-0" />
+                <span className="text-sm font-medium truncate">
+                  {t("address.use-as-is")}: «{value.trim()}»
+                </span>
+              </button>
+            </div>
           )}
 
           {suggestions.map((suggestion) => (

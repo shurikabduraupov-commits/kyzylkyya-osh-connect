@@ -6,6 +6,7 @@ export type NominatimSuggestion = {
   type: string;
   lat: string;
   lon: string;
+  searchTerms: string[];
 };
 
 const DIGRAPH_MAP: Array<[RegExp, string]> = [
@@ -190,15 +191,19 @@ async function fetchCityPlaces(city: string): Promise<NominatimSuggestion[]> {
   const [lon, lat] = coords;
 
   const query = `
-    [out:json][timeout:20];
+    [out:json][timeout:25];
     (
-      way["highway"]["name"](around:7000,${lat},${lon});
-      node["amenity"]["name"](around:7000,${lat},${lon});
-      way["amenity"]["name"](around:7000,${lat},${lon});
-      node["shop"]["name"](around:7000,${lat},${lon});
-      node["tourism"]["name"](around:7000,${lat},${lon});
+      way["highway"]["name"](around:10000,${lat},${lon});
+      way["highway"]["name:ru"](around:10000,${lat},${lon});
+      way["highway"]["name:ky"](around:10000,${lat},${lon});
+      way["highway"]["name:en"](around:10000,${lat},${lon});
+      node["place"~"neighbourhood|suburb|quarter|hamlet|village"]["name"](around:10000,${lat},${lon});
+      node["amenity"]["name"](around:8000,${lat},${lon});
+      way["amenity"]["name"](around:8000,${lat},${lon});
+      node["shop"]["name"](around:8000,${lat},${lon});
+      node["tourism"]["name"](around:8000,${lat},${lon});
     );
-    out tags center 800;
+    out tags center 1200;
   `;
 
   const endpoints = [
@@ -231,13 +236,27 @@ async function fetchCityPlaces(city: string): Promise<NominatimSuggestion[]> {
 
   for (const el of data.elements ?? []) {
     const tags = el.tags ?? {};
-    const rawName = tags.name;
+    const rawName =
+      tags["name:ru"] || tags.name || tags["name:ky"] || tags["name:en"];
     if (!rawName) continue;
+
+    const altNames = [
+      tags.name,
+      tags["name:ru"],
+      tags["name:ky"],
+      tags["name:en"],
+      tags["alt_name"],
+      tags["official_name"],
+      tags["loc_name"],
+      tags["old_name"],
+    ].filter((s): s is string => !!s);
 
     const cyrName = toCyrillic(rawName);
     const isStreet = !!tags.highway;
+    const isPlace = !!tags.place;
     const amenity = tags.amenity || tags.shop || tags.tourism;
-    const key = `${cyrName.toLowerCase()}|${isStreet ? "s" : amenity || "x"}`;
+    const category = isStreet ? "highway" : isPlace ? "place" : "amenity";
+    const key = `${cyrName.toLowerCase()}|${category}`;
     if (seen.has(key)) continue;
     seen.add(key);
 
@@ -245,23 +264,37 @@ async function fetchCityPlaces(city: string): Promise<NominatimSuggestion[]> {
     const lon = String(el.lon ?? el.center?.lon ?? coords[0]);
 
     const shortLabel = `${cyrName}, ${city}`;
-    const displayName = isStreet
-      ? `${cyrName}, ${city} (көчө)`
-      : `${cyrName}${amenity ? ` — ${amenity}` : ""}, ${city}`;
+    const suffix = isStreet
+      ? "көчө"
+      : isPlace
+        ? tags.place
+        : amenity || "";
+    const displayName = `${cyrName}${suffix ? ` — ${suffix}` : ""}, ${city}`;
+
+    const searchTerms: string[] = [];
+    for (const name of altNames) {
+      searchTerms.push(name.toLowerCase());
+      searchTerms.push(toCyrillic(name).toLowerCase());
+      searchTerms.push(toLatin(name).toLowerCase());
+    }
 
     places.push({
       placeId: `${el.type}:${el.id}`,
       displayName,
       shortLabel,
-      category: isStreet ? "highway" : "amenity",
-      type: tags.highway || amenity || "",
+      category,
+      type: tags.highway || tags.place || amenity || "",
       lat,
       lon,
+      searchTerms: Array.from(new Set(searchTerms)),
     });
   }
 
+  const order: Record<string, number> = { highway: 0, place: 1, amenity: 2 };
   places.sort((a, b) => {
-    if (a.category !== b.category) return a.category === "highway" ? -1 : 1;
+    const oa = order[a.category] ?? 9;
+    const ob = order[b.category] ?? 9;
+    if (oa !== ob) return oa - ob;
     return a.shortLabel.localeCompare(b.shortLabel, "ru");
   });
 
@@ -300,20 +333,18 @@ export async function searchNominatim({
   const needles = buildHaystacks(trimmed);
 
   const matches = places.filter((place) => {
-    const haystacks = buildHaystacks(place.shortLabel);
+    const haystacks = [...place.searchTerms, ...buildHaystacks(place.shortLabel)];
     return needles.some((needle) => haystacks.some((hay) => hay.includes(needle)));
   });
 
   matches.sort((a, b) => {
-    const aStarts = buildHaystacks(a.shortLabel).some((h) =>
-      needles.some((n) => h.startsWith(n)),
-    );
-    const bStarts = buildHaystacks(b.shortLabel).some((h) =>
-      needles.some((n) => h.startsWith(n)),
-    );
+    const aHays = [...a.searchTerms, ...buildHaystacks(a.shortLabel)];
+    const bHays = [...b.searchTerms, ...buildHaystacks(b.shortLabel)];
+    const aStarts = aHays.some((h) => needles.some((n) => h.startsWith(n)));
+    const bStarts = bHays.some((h) => needles.some((n) => h.startsWith(n)));
     if (aStarts !== bStarts) return aStarts ? -1 : 1;
     return 0;
   });
 
-  return matches.slice(0, 15);
+  return matches.slice(0, 20);
 }

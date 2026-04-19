@@ -112,6 +112,7 @@ const translations: Record<Language, Dict> = {
     "address.searching": "Изделүүдө...",
     "address.empty": "Эч нерсе табылган жок",
     "address.error": "Издөө учурунда ката кетти",
+    "address.use-as-is": "Жазылганды колдонуу",
   },
   ru: {
     "lang.kg": "КЫР",
@@ -218,6 +219,7 @@ const translations: Record<Language, Dict> = {
     "address.searching": "Ищем...",
     "address.empty": "Ничего не найдено",
     "address.error": "Ошибка во время поиска",
+    "address.use-as-is": "Использовать как есть",
   },
 };
 
