@@ -14,6 +14,7 @@ export type RideStatus = (typeof RideStatus)[keyof typeof RideStatus];
 export const RideStatus = {
   active: "active",
   accepted: "accepted",
+  cancelled: "cancelled",
 } as const;
 
 export interface CreateRideRequest {
@@ -32,6 +33,10 @@ export interface CreateRideRequest {
   seats: number;
   departAfter: string;
   departBefore: string;
+}
+
+export interface ReleaseRideRequest {
+  driverPhone: string;
 }
 
 export interface AcceptRideRequest {
@@ -89,6 +94,7 @@ export interface RideRequest {
   departBefore: string;
   createdAt: string;
   acceptedAt: string | null;
+  cancelledAt: string | null;
 }
 
 export interface ActiveDriver {

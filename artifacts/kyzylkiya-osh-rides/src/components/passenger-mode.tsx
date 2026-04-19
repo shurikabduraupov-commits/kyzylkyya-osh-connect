@@ -5,8 +5,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   useCreateRideRequest,
   useGetRideRequest,
+  useCancelRideRequest,
   getGetRideRequestQueryKey,
+  getListActiveDriversQueryKey,
 } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,7 +44,9 @@ function combineDateTime(day: "today" | "tomorrow", time: string): Date {
 export function PassengerMode() {
   const { t, lang } = useTranslation();
   const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
+  const [previousStatus, setPreviousStatus] = useState<string | null>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const settlements = useAllSettlements();
 
   const createRideSchema = useMemo(
@@ -142,13 +147,57 @@ export function PassengerMode() {
       query: {
         enabled: !!activeRequestId,
         refetchInterval: (data) => {
-          if (data?.state?.data?.status === "active") return 3000;
+          const s = data?.state?.data?.status;
+          if (s === "active" || s === "accepted") return 3000;
           return false;
         },
         queryKey: getGetRideRequestQueryKey(activeRequestId || ""),
       },
     },
   );
+
+  const cancelMutation = useCancelRideRequest({
+    mutation: {
+      onSuccess: () => {
+        toast({
+          title: t("passenger.cancel.toast.title"),
+          description: t("passenger.cancel.toast.desc"),
+        });
+        setActiveRequestId(null);
+        setPreviousStatus(null);
+        form.reset();
+      },
+      onError: () => {
+        toast({
+          title: t("passenger.cancel.error"),
+          variant: "destructive",
+        });
+      },
+    },
+  });
+
+  useEffect(() => {
+    if (!activeRequest) return;
+    if (previousStatus === "accepted" && activeRequest.status === "active") {
+      toast({
+        title: t("passenger.released.toast.title"),
+        description: t("passenger.released.toast.desc"),
+      });
+      queryClient.invalidateQueries({ queryKey: getListActiveDriversQueryKey() });
+    }
+    if (activeRequest.status === "cancelled") {
+      setActiveRequestId(null);
+      setPreviousStatus(null);
+      return;
+    }
+    setPreviousStatus(activeRequest.status);
+  }, [activeRequest, previousStatus, toast, t, queryClient]);
+
+  const handleCancel = () => {
+    if (!activeRequestId) return;
+    if (!window.confirm(t("passenger.cancel.confirm"))) return;
+    cancelMutation.mutate({ id: activeRequestId });
+  };
 
   const onSubmit = (data: CreateRideValues) => {
     const { departDay, departAfter, departBefore, ...rest } = data;
@@ -268,13 +317,28 @@ export function PassengerMode() {
               >
                 {t("passenger.found.search-other")}
               </Button>
+
+              <Button
+                variant="ghost"
+                className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={handleCancel}
+                disabled={cancelMutation.isPending}
+              >
+                {t("passenger.found.cancel")}
+              </Button>
             </div>
           </CardContent>
         </Card>
       );
     }
 
-    return <WaitingCard route={activeRequest?.route || form.getValues("origin") + " → " + form.getValues("destination")} />;
+    return (
+      <WaitingCard
+        route={activeRequest?.route || form.getValues("origin") + " → " + form.getValues("destination")}
+        onCancel={handleCancel}
+        canceling={cancelMutation.isPending}
+      />
+    );
   }
 
   const watchOrigin = form.watch("origin");
@@ -500,7 +564,15 @@ export function PassengerMode() {
   );
 }
 
-function WaitingCard({ route }: { route: string }) {
+function WaitingCard({
+  route,
+  onCancel,
+  canceling,
+}: {
+  route: string;
+  onCancel?: () => void;
+  canceling?: boolean;
+}) {
   const { t } = useTranslation();
   return (
     <Card className="w-full shadow-md border-border bg-card overflow-hidden">
@@ -518,6 +590,16 @@ function WaitingCard({ route }: { route: string }) {
             {t("passenger.waiting.desc")}
           </p>
         </div>
+        {onCancel && (
+          <Button
+            variant="ghost"
+            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={onCancel}
+            disabled={canceling}
+          >
+            {t("passenger.cancel")}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

@@ -77,6 +77,56 @@ paths:
                 $ref: "#/components/schemas/RideRequest"
         "404":
           description: Request not found
+  /requests/{id}/cancel:
+    post:
+      operationId: cancelRideRequest
+      tags: [rides]
+      summary: Passenger cancels their ride request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Cancelled request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RideRequest"
+        "404":
+          description: Request not found
+  /requests/{id}/release:
+    post:
+      operationId: releaseRideRequest
+      tags: [rides]
+      summary: Driver releases an accepted ride back to the active pool
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReleaseRideRequest"
+      responses:
+        "200":
+          description: Released ride is active again
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RideRequest"
+        "403":
+          description: Driver phone does not match
+        "404":
+          description: Request not found
+        "409":
+          description: Request is not accepted
   /requests/{id}/accept:
     post:
       operationId: acceptRideRequest
@@ -142,7 +192,7 @@ components:
         - status
     RideStatus:
       type: string
-      enum: [active, accepted]
+      enum: [active, accepted, cancelled]
     CreateRideRequest:
       type: object
       properties:
@@ -175,6 +225,13 @@ components:
         - seats
         - departAfter
         - departBefore
+    ReleaseRideRequest:
+      type: object
+      properties:
+        driverPhone:
+          type: string
+      required:
+        - driverPhone
     AcceptRideRequest:
       type: object
       properties:
@@ -279,6 +336,10 @@ components:
           type: string
           format: date-time
           nullable: true
+        cancelledAt:
+          type: string
+          format: date-time
+          nullable: true
       required:
         - id
         - origin
@@ -301,6 +362,7 @@ components:
         - departBefore
         - createdAt
         - acceptedAt
+        - cancelledAt
     ActiveDriver:
       type: object
       properties:

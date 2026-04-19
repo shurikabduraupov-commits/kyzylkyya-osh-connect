@@ -10,6 +10,7 @@ export * from "./acceptRideRequest";
 export * from "./activeDriver";
 export * from "./createRideRequest";
 export * from "./healthStatus";
+export * from "./releaseRideRequest";
 export * from "./rideRequest";
 export * from "./rideStats";
 export * from "./rideStatus";

@@ -11,4 +11,5 @@ export type RideStatus = (typeof RideStatus)[keyof typeof RideStatus];
 export const RideStatus = {
   active: "active",
   accepted: "accepted",
+  cancelled: "cancelled",
 } as const;

@@ -21,6 +21,7 @@ import type {
   ActiveDriver,
   CreateRideRequest,
   HealthStatus,
+  ReleaseRideRequest,
   RideRequest,
   RideStats,
 } from "./api.schemas";
@@ -357,6 +358,177 @@ export function useGetRideRequest<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Passenger cancels their ride request
+ */
+export const getCancelRideRequestUrl = (id: string) => {
+  return `/rides-api/requests/${id}/cancel`;
+};
+
+export const cancelRideRequest = async (
+  id: string,
+  options?: RequestInit,
+): Promise<RideRequest> => {
+  return customFetch<RideRequest>(getCancelRideRequestUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCancelRideRequestMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelRideRequest>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof cancelRideRequest>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["cancelRideRequest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof cancelRideRequest>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return cancelRideRequest(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CancelRideRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof cancelRideRequest>>
+>;
+
+export type CancelRideRequestMutationError = ErrorType<void>;
+
+/**
+ * @summary Passenger cancels their ride request
+ */
+export const useCancelRideRequest = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelRideRequest>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof cancelRideRequest>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getCancelRideRequestMutationOptions(options));
+};
+
+/**
+ * @summary Driver releases an accepted ride back to the active pool
+ */
+export const getReleaseRideRequestUrl = (id: string) => {
+  return `/rides-api/requests/${id}/release`;
+};
+
+export const releaseRideRequest = async (
+  id: string,
+  releaseRideRequest: ReleaseRideRequest,
+  options?: RequestInit,
+): Promise<RideRequest> => {
+  return customFetch<RideRequest>(getReleaseRideRequestUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(releaseRideRequest),
+  });
+};
+
+export const getReleaseRideRequestMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof releaseRideRequest>>,
+    TError,
+    { id: string; data: BodyType<ReleaseRideRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof releaseRideRequest>>,
+  TError,
+  { id: string; data: BodyType<ReleaseRideRequest> },
+  TContext
+> => {
+  const mutationKey = ["releaseRideRequest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof releaseRideRequest>>,
+    { id: string; data: BodyType<ReleaseRideRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return releaseRideRequest(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReleaseRideRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof releaseRideRequest>>
+>;
+export type ReleaseRideRequestMutationBody = BodyType<ReleaseRideRequest>;
+export type ReleaseRideRequestMutationError = ErrorType<void>;
+
+/**
+ * @summary Driver releases an accepted ride back to the active pool
+ */
+export const useReleaseRideRequest = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof releaseRideRequest>>,
+    TError,
+    { id: string; data: BodyType<ReleaseRideRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof releaseRideRequest>>,
+  TError,
+  { id: string; data: BodyType<ReleaseRideRequest> },
+  TContext
+> => {
+  return useMutation(getReleaseRideRequestMutationOptions(options));
+};
 
 /**
  * @summary Driver accepts a passenger request

@@ -29,4 +29,5 @@ export interface RideRequest {
   departBefore: Date;
   createdAt: Date;
   acceptedAt: Date | null;
+  cancelledAt: Date | null;
 }

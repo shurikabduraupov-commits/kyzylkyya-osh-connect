@@ -26,7 +26,7 @@ export const ListRideRequestsResponseItem = zod.object({
   notes: zod.string().nullable(),
   seats: zod.number(),
   route: zod.string(),
-  status: zod.enum(["active", "accepted"]),
+  status: zod.enum(["active", "accepted", "cancelled"]),
   driverName: zod.string().nullable(),
   driverPhone: zod.string().nullable(),
   driverAge: zod.number().nullable(),
@@ -40,6 +40,7 @@ export const ListRideRequestsResponseItem = zod.object({
   departBefore: zod.coerce.date(),
   createdAt: zod.coerce.date(),
   acceptedAt: zod.coerce.date().nullable(),
+  cancelledAt: zod.coerce.date().nullable(),
 });
 export const ListRideRequestsResponse = zod.array(ListRideRequestsResponseItem);
 
@@ -81,7 +82,7 @@ export const GetRideRequestResponse = zod.object({
   notes: zod.string().nullable(),
   seats: zod.number(),
   route: zod.string(),
-  status: zod.enum(["active", "accepted"]),
+  status: zod.enum(["active", "accepted", "cancelled"]),
   driverName: zod.string().nullable(),
   driverPhone: zod.string().nullable(),
   driverAge: zod.number().nullable(),
@@ -95,6 +96,75 @@ export const GetRideRequestResponse = zod.object({
   departBefore: zod.coerce.date(),
   createdAt: zod.coerce.date(),
   acceptedAt: zod.coerce.date().nullable(),
+  cancelledAt: zod.coerce.date().nullable(),
+});
+
+/**
+ * @summary Passenger cancels their ride request
+ */
+export const CancelRideRequestParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const CancelRideRequestResponse = zod.object({
+  id: zod.string(),
+  origin: zod.string(),
+  destination: zod.string(),
+  pickupAddress: zod.string(),
+  notes: zod.string().nullable(),
+  seats: zod.number(),
+  route: zod.string(),
+  status: zod.enum(["active", "accepted", "cancelled"]),
+  driverName: zod.string().nullable(),
+  driverPhone: zod.string().nullable(),
+  driverAge: zod.number().nullable(),
+  driverExperience: zod.number().nullable(),
+  carMake: zod.string().nullable(),
+  carYear: zod.number().nullable(),
+  carPlate: zod.string().nullable(),
+  carColor: zod.string().nullable(),
+  carSeats: zod.number().nullable(),
+  departAfter: zod.coerce.date(),
+  departBefore: zod.coerce.date(),
+  createdAt: zod.coerce.date(),
+  acceptedAt: zod.coerce.date().nullable(),
+  cancelledAt: zod.coerce.date().nullable(),
+});
+
+/**
+ * @summary Driver releases an accepted ride back to the active pool
+ */
+export const ReleaseRideRequestParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const ReleaseRideRequestBody = zod.object({
+  driverPhone: zod.string(),
+});
+
+export const ReleaseRideRequestResponse = zod.object({
+  id: zod.string(),
+  origin: zod.string(),
+  destination: zod.string(),
+  pickupAddress: zod.string(),
+  notes: zod.string().nullable(),
+  seats: zod.number(),
+  route: zod.string(),
+  status: zod.enum(["active", "accepted", "cancelled"]),
+  driverName: zod.string().nullable(),
+  driverPhone: zod.string().nullable(),
+  driverAge: zod.number().nullable(),
+  driverExperience: zod.number().nullable(),
+  carMake: zod.string().nullable(),
+  carYear: zod.number().nullable(),
+  carPlate: zod.string().nullable(),
+  carColor: zod.string().nullable(),
+  carSeats: zod.number().nullable(),
+  departAfter: zod.coerce.date(),
+  departBefore: zod.coerce.date(),
+  createdAt: zod.coerce.date(),
+  acceptedAt: zod.coerce.date().nullable(),
+  cancelledAt: zod.coerce.date().nullable(),
 });
 
 /**
@@ -154,7 +224,7 @@ export const AcceptRideRequestResponse = zod.object({
   notes: zod.string().nullable(),
   seats: zod.number(),
   route: zod.string(),
-  status: zod.enum(["active", "accepted"]),
+  status: zod.enum(["active", "accepted", "cancelled"]),
   driverName: zod.string().nullable(),
   driverPhone: zod.string().nullable(),
   driverAge: zod.number().nullable(),
@@ -168,6 +238,7 @@ export const AcceptRideRequestResponse = zod.object({
   departBefore: zod.coerce.date(),
   createdAt: zod.coerce.date(),
   acceptedAt: zod.coerce.date().nullable(),
+  cancelledAt: zod.coerce.date().nullable(),
 });
 
 /**

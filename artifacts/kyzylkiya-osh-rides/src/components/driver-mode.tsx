@@ -6,8 +6,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   useListRideRequests,
   useAcceptRideRequest,
+  useReleaseRideRequest,
   getListRideRequestsQueryKey,
   getGetRideStatsQueryKey,
+  getListActiveDriversQueryKey,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,6 +105,34 @@ export function DriverMode() {
       queryKey: getListRideRequestsQueryKey(),
     },
   });
+
+  const releaseMutation = useReleaseRideRequest({
+    mutation: {
+      onSuccess: () => {
+        toast({
+          title: t("driver.mine.released.title"),
+          description: t("driver.mine.released.desc"),
+        });
+        queryClient.invalidateQueries({ queryKey: getListRideRequestsQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetRideStatsQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getListActiveDriversQueryKey() });
+      },
+      onError: () => {
+        toast({
+          title: t("driver.mine.release.error"),
+          variant: "destructive",
+        });
+      },
+    },
+  });
+
+  const handleReleaseClick = (rideId: string) => {
+    if (!window.confirm(t("driver.mine.release.confirm"))) return;
+    releaseMutation.mutate({
+      id: rideId,
+      data: { driverPhone: savedProfile.driverPhone },
+    });
+  };
 
   const acceptMutation = useAcceptRideRequest({
     mutation: {
@@ -205,6 +235,13 @@ export function DriverMode() {
     if (destinationFilter !== ALL_ROUTES_VALUE && request.destination !== destinationFilter) return false;
     return true;
   });
+
+  const myAcceptedRides = requests.filter(
+    (request) =>
+      request.status === "accepted" &&
+      request.driverPhone === savedProfile.driverPhone &&
+      !!savedProfile.driverPhone,
+  );
 
   const renderProfileFields = () => (
     <>
@@ -457,6 +494,54 @@ export function DriverMode() {
             {t("driver.profile.change")}
           </Button>
         </div>
+      )}
+
+      {myAcceptedRides.length > 0 && (
+        <Card className="shadow-sm border-primary/30 bg-primary/5">
+          <CardContent className="p-4 space-y-3">
+            <p className="text-sm font-semibold text-primary">{t("driver.mine.title")}</p>
+            <div className="space-y-3">
+              {myAcceptedRides.map((ride) => (
+                <div key={ride.id} className="rounded-xl border border-border bg-card p-3 space-y-2">
+                  <div className="flex items-center gap-2 text-primary font-semibold text-sm">
+                    <span>{ride.origin}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                    <span>{ride.destination}</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <MapPin className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+                    <p className="text-sm font-medium leading-tight">{ride.pickupAddress}</p>
+                  </div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-3">
+                    <span className="flex items-center gap-1">
+                      <Users className="w-3 h-3" />
+                      {t("driver.card.seats", { n: ride.seats })}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {formatDepartTime(ride.departAfter)}–{formatDepartTime(ride.departBefore)}
+                    </span>
+                  </div>
+                  {ride.notes && (
+                    <p className="text-xs text-foreground/80 bg-muted/50 rounded-md px-2 py-1.5 leading-snug">
+                      {ride.notes}
+                    </p>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => handleReleaseClick(ride.id)}
+                    disabled={releaseMutation.isPending}
+                  >
+                    {t("driver.mine.release")}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <Card className="shadow-sm border-border">

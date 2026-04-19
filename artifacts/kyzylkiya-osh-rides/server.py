@@ -75,8 +75,8 @@ class RideHandler(BaseHTTPRequestHandler):
             self._send_json(200, {"status": "ok"})
             return
         if parts == ["requests"]:
-            active = [item for item in requests_store if item["status"] == "active"]
-            self._send_json(200, active)
+            visible = [item for item in requests_store if item["status"] in ("active", "accepted")]
+            self._send_json(200, visible)
             return
         if len(parts) == 2 and parts[0] == "requests":
             ride = next((item for item in requests_store if item["id"] == parts[1]), None)
@@ -202,6 +202,7 @@ class RideHandler(BaseHTTPRequestHandler):
                 "departBefore": before_dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
                 "createdAt": now_iso(),
                 "acceptedAt": None,
+                "cancelledAt": None,
             }
             requests_store.insert(0, ride)
             self._send_json(201, ride)
@@ -222,6 +223,43 @@ class RideHandler(BaseHTTPRequestHandler):
             custom_settlements.append(name)
             _save_custom_settlements(custom_settlements)
             self._send_json(201, custom_settlements)
+            return
+        if len(parts) == 3 and parts[0] == "requests" and parts[2] == "cancel":
+            ride = next((item for item in requests_store if item["id"] == parts[1]), None)
+            if ride is None:
+                self._send_json(404, {"message": "Заявка табылган жок"})
+                return
+            if ride["status"] == "cancelled":
+                self._send_json(200, ride)
+                return
+            ride["status"] = "cancelled"
+            ride["cancelledAt"] = now_iso()
+            self._send_json(200, ride)
+            return
+        if len(parts) == 3 and parts[0] == "requests" and parts[2] == "release":
+            ride = next((item for item in requests_store if item["id"] == parts[1]), None)
+            if ride is None:
+                self._send_json(404, {"message": "Заявка табылган жок"})
+                return
+            if ride["status"] != "accepted":
+                self._send_json(409, {"message": "Заказ кабыл алынган эмес"})
+                return
+            driver_phone = str(data.get("driverPhone", "")).strip()
+            if driver_phone and ride.get("driverPhone") and driver_phone != ride["driverPhone"]:
+                self._send_json(403, {"message": "Бул заказ башка айдоочуга таандык"})
+                return
+            ride["status"] = "active"
+            ride["driverName"] = None
+            ride["driverPhone"] = None
+            ride["driverAge"] = None
+            ride["driverExperience"] = None
+            ride["carMake"] = None
+            ride["carYear"] = None
+            ride["carPlate"] = None
+            ride["carColor"] = None
+            ride["carSeats"] = None
+            ride["acceptedAt"] = None
+            self._send_json(200, ride)
             return
         if len(parts) == 3 and parts[0] == "requests" and parts[2] == "accept":
             ride = next((item for item in requests_store if item["id"] == parts[1]), None)
