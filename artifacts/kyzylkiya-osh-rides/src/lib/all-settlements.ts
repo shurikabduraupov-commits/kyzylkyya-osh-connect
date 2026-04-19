@@ -2,7 +2,38 @@ import { useEffect, useState } from "react";
 import { KYRGYZSTAN_SETTLEMENTS } from "@/lib/settlements";
 
 const STORAGE_KEY = "mak.kg.settlements.v2";
+const CUSTOM_KEY = "mak.kg.settlements.custom.v1";
 const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+function readCustom(): string[] {
+  try {
+    const raw = localStorage.getItem(CUSTOM_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((s) => typeof s === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeCustom(list: string[]): void {
+  try {
+    localStorage.setItem(CUSTOM_KEY, JSON.stringify(list));
+  } catch {
+    // ignore quota
+  }
+}
+
+const customListeners = new Set<() => void>();
+
+export function addCustomSettlement(name: string): void {
+  const trimmed = name.trim();
+  if (trimmed.length < 2) return;
+  const current = readCustom();
+  if (current.some((s) => s.toLowerCase() === trimmed.toLowerCase())) return;
+  writeCustom([...current, trimmed]);
+  customListeners.forEach((fn) => fn());
+}
 
 type CachePayload = {
   loadedAt: number;
@@ -157,41 +188,61 @@ function mergeAndSort(extra: string[]): string[] {
 let cachedList: string[] | null = null;
 let inflight: Promise<string[]> | null = null;
 
+function withCustom(base: string[]): string[] {
+  const custom = readCustom();
+  if (custom.length === 0) return base;
+  const seen = new Set(base.map((s) => s.toLowerCase()));
+  const extras = custom.filter((s) => !seen.has(s.toLowerCase()));
+  return extras.length === 0 ? base : [...base, ...extras];
+}
+
 export function useAllSettlements(): string[] {
   const [list, setList] = useState<string[]>(() => {
-    if (cachedList) return cachedList;
+    if (cachedList) return withCustom(cachedList);
     const fromStorage = readCache();
     if (fromStorage) {
       cachedList = mergeAndSort(fromStorage);
-      return cachedList;
+      return withCustom(cachedList);
     }
-    return KYRGYZSTAN_SETTLEMENTS;
+    return withCustom(KYRGYZSTAN_SETTLEMENTS);
   });
 
   useEffect(() => {
-    if (cachedList && cachedList.length > KYRGYZSTAN_SETTLEMENTS.length) return;
-    if (readCache()) return;
+    const refresh = () => {
+      const base = cachedList ?? KYRGYZSTAN_SETTLEMENTS;
+      setList(withCustom(base));
+    };
+    customListeners.add(refresh);
 
-    const controller = new AbortController();
-    if (!inflight) {
-      inflight = fetchAllFromOverpass(controller.signal)
-        .then((names) => {
-          if (names.length === 0) return KYRGYZSTAN_SETTLEMENTS;
-          const merged = mergeAndSort(names);
-          cachedList = merged;
-          writeCache(names);
-          return merged;
-        })
-        .catch(() => KYRGYZSTAN_SETTLEMENTS)
-        .finally(() => {
-          inflight = null;
+    let controller: AbortController | null = null;
+    if (!cachedList || cachedList.length <= KYRGYZSTAN_SETTLEMENTS.length) {
+      const fromStorage = readCache();
+      if (!fromStorage) {
+        controller = new AbortController();
+        if (!inflight) {
+          inflight = fetchAllFromOverpass(controller.signal)
+            .then((names) => {
+              if (names.length === 0) return KYRGYZSTAN_SETTLEMENTS;
+              const merged = mergeAndSort(names);
+              cachedList = merged;
+              writeCache(names);
+              return merged;
+            })
+            .catch(() => KYRGYZSTAN_SETTLEMENTS)
+            .finally(() => {
+              inflight = null;
+            });
+        }
+        inflight.then((merged) => {
+          if (!controller!.signal.aborted) setList(withCustom(merged));
         });
+      }
     }
-    inflight.then((merged) => {
-      if (!controller.signal.aborted) setList(merged);
-    });
 
-    return () => controller.abort();
+    return () => {
+      customListeners.delete(refresh);
+      controller?.abort();
+    };
   }, []);
 
   return list;

@@ -247,6 +247,7 @@ export function PassengerMode() {
                             .filter((s) => s !== destination)
                             .map((s) => ({ value: s, label: s }))}
                           placeholder={t("passenger.origin.placeholder")}
+                          allowCustom
                         />
                       </FormControl>
                       <FormMessage />
@@ -276,6 +277,7 @@ export function PassengerMode() {
                             .filter((s) => s !== origin)
                             .map((s) => ({ value: s, label: s }))}
                           placeholder={t("passenger.destination.placeholder")}
+                          allowCustom
                         />
                       </FormControl>
                       <FormMessage />
