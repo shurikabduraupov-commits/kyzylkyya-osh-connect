@@ -184,39 +184,59 @@ export function PassengerMode() {
               <FormField
                 control={form.control}
                 name="origin"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-foreground">{t("passenger.origin.label")}</FormLabel>
-                    <FormControl>
-                      <SettlementCombobox
-                        value={field.value}
-                        onChange={field.onChange}
-                        options={KYRGYZSTAN_SETTLEMENTS.map((s) => ({ value: s, label: s }))}
-                        placeholder={t("passenger.origin.placeholder")}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const destination = form.watch("destination");
+                  return (
+                    <FormItem>
+                      <FormLabel className="text-foreground">{t("passenger.origin.label")}</FormLabel>
+                      <FormControl>
+                        <SettlementCombobox
+                          value={field.value}
+                          onChange={(v) => {
+                            field.onChange(v);
+                            if (v === form.getValues("destination")) {
+                              form.setValue("destination", "", { shouldValidate: true });
+                            }
+                          }}
+                          options={KYRGYZSTAN_SETTLEMENTS
+                            .filter((s) => s !== destination)
+                            .map((s) => ({ value: s, label: s }))}
+                          placeholder={t("passenger.origin.placeholder")}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
 
               <FormField
                 control={form.control}
                 name="destination"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-foreground">{t("passenger.destination.label")}</FormLabel>
-                    <FormControl>
-                      <SettlementCombobox
-                        value={field.value}
-                        onChange={field.onChange}
-                        options={KYRGYZSTAN_SETTLEMENTS.map((s) => ({ value: s, label: s }))}
-                        placeholder={t("passenger.destination.placeholder")}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const origin = form.watch("origin");
+                  return (
+                    <FormItem>
+                      <FormLabel className="text-foreground">{t("passenger.destination.label")}</FormLabel>
+                      <FormControl>
+                        <SettlementCombobox
+                          value={field.value}
+                          onChange={(v) => {
+                            field.onChange(v);
+                            if (v === form.getValues("origin")) {
+                              form.setValue("origin", "", { shouldValidate: true });
+                            }
+                          }}
+                          options={KYRGYZSTAN_SETTLEMENTS
+                            .filter((s) => s !== origin)
+                            .map((s) => ({ value: s, label: s }))}
+                          placeholder={t("passenger.destination.placeholder")}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
             </div>
 
