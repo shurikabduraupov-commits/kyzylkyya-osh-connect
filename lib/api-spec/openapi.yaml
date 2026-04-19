@@ -170,9 +170,41 @@ components:
         driverPhone:
           type: string
           minLength: 5
+        driverAge:
+          type: integer
+          minimum: 18
+          maximum: 80
+        driverExperience:
+          type: integer
+          minimum: 0
+          maximum: 60
+        carMake:
+          type: string
+          minLength: 2
+        carYear:
+          type: integer
+          minimum: 1980
+          maximum: 2030
+        carPlate:
+          type: string
+          minLength: 3
+        carColor:
+          type: string
+          minLength: 2
+        carSeats:
+          type: integer
+          minimum: 1
+          maximum: 8
       required:
         - driverName
         - driverPhone
+        - driverAge
+        - driverExperience
+        - carMake
+        - carYear
+        - carPlate
+        - carColor
+        - carSeats
     RideRequest:
       type: object
       properties:
@@ -199,6 +231,27 @@ components:
         driverPhone:
           type: string
           nullable: true
+        driverAge:
+          type: integer
+          nullable: true
+        driverExperience:
+          type: integer
+          nullable: true
+        carMake:
+          type: string
+          nullable: true
+        carYear:
+          type: integer
+          nullable: true
+        carPlate:
+          type: string
+          nullable: true
+        carColor:
+          type: string
+          nullable: true
+        carSeats:
+          type: integer
+          nullable: true
         departAfter:
           type: string
           format: date-time
@@ -223,6 +276,13 @@ components:
         - status
         - driverName
         - driverPhone
+        - driverAge
+        - driverExperience
+        - carMake
+        - carYear
+        - carPlate
+        - carColor
+        - carSeats
         - departAfter
         - departBefore
         - createdAt

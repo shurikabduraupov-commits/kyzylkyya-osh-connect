@@ -29,6 +29,13 @@ export const ListRideRequestsResponseItem = zod.object({
   status: zod.enum(["active", "accepted"]),
   driverName: zod.string().nullable(),
   driverPhone: zod.string().nullable(),
+  driverAge: zod.number().nullable(),
+  driverExperience: zod.number().nullable(),
+  carMake: zod.string().nullable(),
+  carYear: zod.number().nullable(),
+  carPlate: zod.string().nullable(),
+  carColor: zod.string().nullable(),
+  carSeats: zod.number().nullable(),
   departAfter: zod.coerce.date(),
   departBefore: zod.coerce.date(),
   createdAt: zod.coerce.date(),
@@ -77,6 +84,13 @@ export const GetRideRequestResponse = zod.object({
   status: zod.enum(["active", "accepted"]),
   driverName: zod.string().nullable(),
   driverPhone: zod.string().nullable(),
+  driverAge: zod.number().nullable(),
+  driverExperience: zod.number().nullable(),
+  carMake: zod.string().nullable(),
+  carYear: zod.number().nullable(),
+  carPlate: zod.string().nullable(),
+  carColor: zod.string().nullable(),
+  carSeats: zod.number().nullable(),
   departAfter: zod.coerce.date(),
   departBefore: zod.coerce.date(),
   createdAt: zod.coerce.date(),
@@ -94,9 +108,42 @@ export const acceptRideRequestBodyDriverNameMin = 2;
 
 export const acceptRideRequestBodyDriverPhoneMin = 5;
 
+export const acceptRideRequestBodyDriverAgeMin = 18;
+export const acceptRideRequestBodyDriverAgeMax = 80;
+
+export const acceptRideRequestBodyDriverExperienceMin = 0;
+export const acceptRideRequestBodyDriverExperienceMax = 60;
+
+export const acceptRideRequestBodyCarMakeMin = 2;
+
+export const acceptRideRequestBodyCarYearMin = 1980;
+export const acceptRideRequestBodyCarYearMax = 2030;
+
+export const acceptRideRequestBodyCarPlateMin = 3;
+
+export const acceptRideRequestBodyCarColorMin = 2;
+
+export const acceptRideRequestBodyCarSeatsMax = 8;
+
 export const AcceptRideRequestBody = zod.object({
   driverName: zod.string().min(acceptRideRequestBodyDriverNameMin),
   driverPhone: zod.string().min(acceptRideRequestBodyDriverPhoneMin),
+  driverAge: zod
+    .number()
+    .min(acceptRideRequestBodyDriverAgeMin)
+    .max(acceptRideRequestBodyDriverAgeMax),
+  driverExperience: zod
+    .number()
+    .min(acceptRideRequestBodyDriverExperienceMin)
+    .max(acceptRideRequestBodyDriverExperienceMax),
+  carMake: zod.string().min(acceptRideRequestBodyCarMakeMin),
+  carYear: zod
+    .number()
+    .min(acceptRideRequestBodyCarYearMin)
+    .max(acceptRideRequestBodyCarYearMax),
+  carPlate: zod.string().min(acceptRideRequestBodyCarPlateMin),
+  carColor: zod.string().min(acceptRideRequestBodyCarColorMin),
+  carSeats: zod.number().min(1).max(acceptRideRequestBodyCarSeatsMax),
 });
 
 export const AcceptRideRequestResponse = zod.object({
@@ -110,6 +157,13 @@ export const AcceptRideRequestResponse = zod.object({
   status: zod.enum(["active", "accepted"]),
   driverName: zod.string().nullable(),
   driverPhone: zod.string().nullable(),
+  driverAge: zod.number().nullable(),
+  driverExperience: zod.number().nullable(),
+  carMake: zod.string().nullable(),
+  carYear: zod.number().nullable(),
+  carPlate: zod.string().nullable(),
+  carColor: zod.string().nullable(),
+  carSeats: zod.number().nullable(),
   departAfter: zod.coerce.date(),
   departBefore: zod.coerce.date(),
   createdAt: zod.coerce.date(),

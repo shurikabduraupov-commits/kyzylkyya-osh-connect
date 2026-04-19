@@ -21,7 +21,8 @@ import { ALL_ROUTES_VALUE } from "@/lib/settlements";
 import { useAllSettlements } from "@/lib/all-settlements";
 import { SettlementCombobox } from "@/components/settlement-combobox";
 import { useTranslation } from "@/lib/i18n";
-import { readProfile, updateProfile } from "@/lib/profile";
+import { readProfile, updateProfile, isProfileComplete } from "@/lib/profile";
+import { Car } from "lucide-react";
 
 function formatDepartTime(iso: string): string {
   const d = new Date(iso);
@@ -44,19 +45,46 @@ export function DriverMode() {
   const [originFilter, setOriginFilter] = useState(ALL_ROUTES_VALUE);
   const [destinationFilter, setDestinationFilter] = useState(ALL_ROUTES_VALUE);
   const [savedProfile, setSavedProfile] = useState(() => readProfile());
-  const hasSavedProfile = savedProfile.driverName.length >= 2 && savedProfile.driverPhone.length >= 5;
+  const hasSavedProfile = isProfileComplete(savedProfile);
   const settlements = useAllSettlements();
+
+  const intFromString = (min: number, max: number, msg: string) =>
+    z
+      .union([z.string(), z.number()])
+      .transform((v) => (typeof v === "number" ? v : Number(v)))
+      .refine((n) => Number.isFinite(n) && Number.isInteger(n) && n >= min && n <= max, {
+        message: msg,
+      });
 
   const acceptRideSchema = useMemo(
     () =>
       z.object({
         driverName: z.string().min(2, t("driver.error.name")),
         driverPhone: z.string().min(5, t("driver.error.phone")),
+        driverAge: intFromString(18, 80, t("driver.error.age")),
+        driverExperience: intFromString(0, 60, t("driver.error.experience")),
+        carMake: z.string().min(2, t("driver.error.car-make")),
+        carYear: intFromString(1980, 2030, t("driver.error.car-year")),
+        carPlate: z.string().min(3, t("driver.error.car-plate")),
+        carColor: z.string().min(2, t("driver.error.car-color")),
+        carSeats: intFromString(1, 8, t("driver.error.car-seats")),
       }),
     [t],
   );
 
   type AcceptRideValues = z.infer<typeof acceptRideSchema>;
+
+  const profileToFormDefaults = (p: ReturnType<typeof readProfile>) => ({
+    driverName: p.driverName,
+    driverPhone: p.driverPhone,
+    driverAge: p.driverAge != null ? String(p.driverAge) : "",
+    driverExperience: p.driverExperience != null ? String(p.driverExperience) : "",
+    carMake: p.carMake,
+    carYear: p.carYear != null ? String(p.carYear) : "",
+    carPlate: p.carPlate,
+    carColor: p.carColor,
+    carSeats: p.carSeats != null ? String(p.carSeats) : "",
+  }) as unknown as AcceptRideValues;
 
   const timeAgo = (value: string) => {
     const diffMs = Date.now() - new Date(value).getTime();
@@ -82,6 +110,13 @@ export function DriverMode() {
         const next = updateProfile({
           driverName: variables.data.driverName,
           driverPhone: variables.data.driverPhone,
+          driverAge: variables.data.driverAge,
+          driverExperience: variables.data.driverExperience,
+          carMake: variables.data.carMake,
+          carYear: variables.data.carYear,
+          carPlate: variables.data.carPlate,
+          carColor: variables.data.carColor,
+          carSeats: variables.data.carSeats,
         });
         setSavedProfile(next);
         toast({
@@ -104,10 +139,7 @@ export function DriverMode() {
 
   const form = useForm<AcceptRideValues>({
     resolver: zodResolver(acceptRideSchema),
-    defaultValues: {
-      driverName: savedProfile.driverName,
-      driverPhone: savedProfile.driverPhone,
-    },
+    defaultValues: profileToFormDefaults(savedProfile),
   });
 
   const handleAcceptClick = (id: string) => {
@@ -117,22 +149,23 @@ export function DriverMode() {
         data: {
           driverName: savedProfile.driverName,
           driverPhone: savedProfile.driverPhone,
+          driverAge: savedProfile.driverAge!,
+          driverExperience: savedProfile.driverExperience!,
+          carMake: savedProfile.carMake,
+          carYear: savedProfile.carYear!,
+          carPlate: savedProfile.carPlate,
+          carColor: savedProfile.carColor,
+          carSeats: savedProfile.carSeats!,
         },
       });
       return;
     }
-    form.reset({
-      driverName: savedProfile.driverName,
-      driverPhone: savedProfile.driverPhone,
-    });
+    form.reset(profileToFormDefaults(savedProfile));
     setSelectedRequestId(id);
   };
 
   const handleEditProfile = () => {
-    form.reset({
-      driverName: savedProfile.driverName,
-      driverPhone: savedProfile.driverPhone,
-    });
+    form.reset(profileToFormDefaults(savedProfile));
     setSelectedRequestId("__edit__");
   };
 
@@ -148,6 +181,13 @@ export function DriverMode() {
       const next = updateProfile({
         driverName: data.driverName,
         driverPhone: data.driverPhone,
+        driverAge: data.driverAge,
+        driverExperience: data.driverExperience,
+        carMake: data.carMake,
+        carYear: data.carYear,
+        carPlate: data.carPlate,
+        carColor: data.carColor,
+        carSeats: data.carSeats,
       });
       setSavedProfile(next);
       setSelectedRequestId(null);
@@ -166,6 +206,190 @@ export function DriverMode() {
     return true;
   });
 
+  const renderProfileFields = () => (
+    <>
+      <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold pt-1">
+        {t("driver.section.driver")}
+      </p>
+      <FormField
+        control={form.control}
+        name="driverName"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{t("driver.dialog.name")}</FormLabel>
+            <FormControl>
+              <Input placeholder={t("driver.dialog.name.placeholder")} className="h-12" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="driverPhone"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{t("driver.dialog.phone")}</FormLabel>
+            <FormControl>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder={t("driver.dialog.phone.placeholder")}
+                  className="h-12 pl-10"
+                  inputMode="tel"
+                  {...field}
+                />
+              </div>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <div className="grid grid-cols-2 gap-3">
+        <FormField
+          control={form.control}
+          name="driverAge"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("driver.dialog.age")}</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  placeholder={t("driver.dialog.age.placeholder")}
+                  className="h-12"
+                  {...field}
+                  value={field.value as unknown as string ?? ""}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="driverExperience"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("driver.dialog.experience")}</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  placeholder={t("driver.dialog.experience.placeholder")}
+                  className="h-12"
+                  {...field}
+                  value={field.value as unknown as string ?? ""}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold pt-2">
+        {t("driver.section.car")}
+      </p>
+      <FormField
+        control={form.control}
+        name="carMake"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{t("driver.dialog.car-make")}</FormLabel>
+            <FormControl>
+              <div className="relative">
+                <Car className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder={t("driver.dialog.car-make.placeholder")}
+                  className="h-12 pl-10"
+                  {...field}
+                />
+              </div>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <div className="grid grid-cols-2 gap-3">
+        <FormField
+          control={form.control}
+          name="carYear"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("driver.dialog.car-year")}</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  placeholder={t("driver.dialog.car-year.placeholder")}
+                  className="h-12"
+                  {...field}
+                  value={field.value as unknown as string ?? ""}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="carColor"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("driver.dialog.car-color")}</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder={t("driver.dialog.car-color.placeholder")}
+                  className="h-12"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+      <FormField
+        control={form.control}
+        name="carPlate"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{t("driver.dialog.car-plate")}</FormLabel>
+            <FormControl>
+              <Input
+                placeholder={t("driver.dialog.car-plate.placeholder")}
+                className="h-12 uppercase tracking-wider font-mono"
+                {...field}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="carSeats"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{t("driver.dialog.car-seats")}</FormLabel>
+            <FormControl>
+              <Input
+                type="number"
+                inputMode="numeric"
+                placeholder={t("driver.dialog.car-seats.placeholder")}
+                className="h-12"
+                {...field}
+                value={field.value as unknown as string ?? ""}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </>
+  );
+
   if (!hasSavedProfile) {
     return (
       <div className="space-y-4">
@@ -181,44 +405,19 @@ export function DriverMode() {
                   const next = updateProfile({
                     driverName: data.driverName,
                     driverPhone: data.driverPhone,
+                    driverAge: data.driverAge,
+                    driverExperience: data.driverExperience,
+                    carMake: data.carMake,
+                    carYear: data.carYear,
+                    carPlate: data.carPlate,
+                    carColor: data.carColor,
+                    carSeats: data.carSeats,
                   });
                   setSavedProfile(next);
                 })}
                 className="space-y-4"
               >
-                <FormField
-                  control={form.control}
-                  name="driverName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("driver.dialog.name")}</FormLabel>
-                      <FormControl>
-                        <Input placeholder={t("driver.dialog.name.placeholder")} className="h-12" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="driverPhone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("driver.dialog.phone")}</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <Input
-                            placeholder={t("driver.dialog.phone.placeholder")}
-                            className="h-12 pl-10"
-                            {...field}
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {renderProfileFields()}
                 <Button type="submit" className="w-full h-12 font-semibold">
                   {t("driver.onboard.submit")}
                 </Button>
@@ -368,7 +567,7 @@ export function DriverMode() {
       )}
 
       <Dialog open={!!selectedRequestId} onOpenChange={(open) => !open && setSelectedRequestId(null)}>
-        <DialogContent className="sm:max-w-md rounded-2xl">
+        <DialogContent className="sm:max-w-md rounded-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-display text-xl">{t("driver.dialog.title")}</DialogTitle>
             <DialogDescription>{t("driver.dialog.desc")}</DialogDescription>
@@ -376,36 +575,7 @@ export function DriverMode() {
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
-              <FormField
-                control={form.control}
-                name="driverName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("driver.dialog.name")}</FormLabel>
-                    <FormControl>
-                      <Input placeholder={t("driver.dialog.name.placeholder")} className="h-12" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="driverPhone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("driver.dialog.phone")}</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <Input placeholder={t("driver.dialog.phone.placeholder")} className="pl-10 h-12" {...field} />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {renderProfileFields()}
 
               <DialogFooter className="pt-2">
                 <Button

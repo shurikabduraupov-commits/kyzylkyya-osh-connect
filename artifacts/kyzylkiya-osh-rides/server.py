@@ -164,6 +164,13 @@ class RideHandler(BaseHTTPRequestHandler):
                 "status": "active",
                 "driverName": None,
                 "driverPhone": None,
+                "driverAge": None,
+                "driverExperience": None,
+                "carMake": None,
+                "carYear": None,
+                "carPlate": None,
+                "carColor": None,
+                "carSeats": None,
                 "departAfter": after_dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
                 "departBefore": before_dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
                 "createdAt": now_iso(),
@@ -199,15 +206,59 @@ class RideHandler(BaseHTTPRequestHandler):
                 return
             driver_name = str(data.get("driverName", "")).strip()
             driver_phone = str(data.get("driverPhone", "")).strip()
+            car_make = str(data.get("carMake", "")).strip()
+            car_plate = str(data.get("carPlate", "")).strip()
+            car_color = str(data.get("carColor", "")).strip()
+
+            def _to_int(value):
+                try:
+                    return int(value)
+                except (TypeError, ValueError):
+                    return None
+
+            driver_age = _to_int(data.get("driverAge"))
+            driver_exp = _to_int(data.get("driverExperience"))
+            car_year = _to_int(data.get("carYear"))
+            car_seats = _to_int(data.get("carSeats"))
+
             if len(driver_name) < 2:
                 self._send_json(400, {"message": "Айдоочунун атын жазыңыз"})
                 return
             if len(driver_phone) < 5:
                 self._send_json(400, {"message": "Айдоочунун телефонун жазыңыз"})
                 return
+            if driver_age is None or driver_age < 18 or driver_age > 80:
+                self._send_json(400, {"message": "Жашыңызды туура жазыңыз"})
+                return
+            if driver_exp is None or driver_exp < 0 or driver_exp > 60:
+                self._send_json(400, {"message": "Стажыңызды туура жазыңыз"})
+                return
+            if len(car_make) < 2:
+                self._send_json(400, {"message": "Унаанын маркасын жазыңыз"})
+                return
+            if car_year is None or car_year < 1980 or car_year > 2030:
+                self._send_json(400, {"message": "Чыгарылган жылын туура жазыңыз"})
+                return
+            if len(car_plate) < 3:
+                self._send_json(400, {"message": "Мамлекеттик номерин жазыңыз"})
+                return
+            if len(car_color) < 2:
+                self._send_json(400, {"message": "Унаанын түсүн жазыңыз"})
+                return
+            if car_seats is None or car_seats < 1 or car_seats > 8:
+                self._send_json(400, {"message": "Орундардын санын туура жазыңыз"})
+                return
+
             ride["status"] = "accepted"
             ride["driverName"] = driver_name
             ride["driverPhone"] = driver_phone
+            ride["driverAge"] = driver_age
+            ride["driverExperience"] = driver_exp
+            ride["carMake"] = car_make
+            ride["carYear"] = car_year
+            ride["carPlate"] = car_plate
+            ride["carColor"] = car_color
+            ride["carSeats"] = car_seats
             ride["acceptedAt"] = now_iso()
             self._send_json(200, ride)
             return

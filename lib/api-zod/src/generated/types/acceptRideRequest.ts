@@ -11,4 +11,30 @@ export interface AcceptRideRequest {
   driverName: string;
   /** @minLength 5 */
   driverPhone: string;
+  /**
+   * @minimum 18
+   * @maximum 80
+   */
+  driverAge: number;
+  /**
+   * @minimum 0
+   * @maximum 60
+   */
+  driverExperience: number;
+  /** @minLength 2 */
+  carMake: string;
+  /**
+   * @minimum 1980
+   * @maximum 2030
+   */
+  carYear: number;
+  /** @minLength 3 */
+  carPlate: string;
+  /** @minLength 2 */
+  carColor: string;
+  /**
+   * @minimum 1
+   * @maximum 8
+   */
+  carSeats: number;
 }

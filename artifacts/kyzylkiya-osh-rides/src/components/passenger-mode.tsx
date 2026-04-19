@@ -176,18 +176,67 @@ export function PassengerMode() {
           </div>
 
           <CardContent className="p-6 space-y-6">
-            <div className="bg-muted/50 rounded-xl p-4 flex items-center justify-between">
+            <div className="bg-muted/50 rounded-xl p-4 space-y-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                   <Car className="w-5 h-5 text-primary" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
                     {t("passenger.found.driver")}
                   </p>
-                  <p className="font-semibold text-foreground text-lg">{activeRequest.driverName}</p>
+                  <p className="font-semibold text-foreground text-lg truncate">
+                    {activeRequest.driverName}
+                    {activeRequest.driverAge != null && (
+                      <span className="text-sm text-muted-foreground font-normal">
+                        {" "}· {activeRequest.driverAge} {t("passenger.found.age-short")}
+                      </span>
+                    )}
+                  </p>
+                  {activeRequest.driverExperience != null && (
+                    <p className="text-xs text-muted-foreground">
+                      {t("passenger.found.experience", { n: activeRequest.driverExperience })}
+                    </p>
+                  )}
                 </div>
               </div>
+
+              {(activeRequest.carMake || activeRequest.carPlate) && (
+                <div className="border-t border-border/60 pt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+                  {activeRequest.carMake && (
+                    <div className="col-span-2">
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                        {t("passenger.found.car")}
+                      </p>
+                      <p className="font-semibold text-foreground">
+                        {activeRequest.carColor && `${activeRequest.carColor} `}
+                        {activeRequest.carMake}
+                        {activeRequest.carYear != null && ` · ${activeRequest.carYear}`}
+                      </p>
+                    </div>
+                  )}
+                  {activeRequest.carPlate && (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                        {t("passenger.found.plate")}
+                      </p>
+                      <p className="font-mono font-bold tracking-wider uppercase text-foreground">
+                        {activeRequest.carPlate}
+                      </p>
+                    </div>
+                  )}
+                  {activeRequest.carSeats != null && (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                        {t("passenger.found.seats")}
+                      </p>
+                      <p className="font-semibold text-foreground">
+                        {t("passenger.found.seats-value", { n: activeRequest.carSeats })}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="space-y-3">
