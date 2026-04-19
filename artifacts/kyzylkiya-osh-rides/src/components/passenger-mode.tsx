@@ -294,8 +294,8 @@ export function PassengerMode() {
               )}
             />
 
-            <FormItem>
-              <FormLabel className="text-foreground">{t("passenger.depart.label")}</FormLabel>
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-foreground">{t("passenger.depart.label")}</p>
               <div className="grid grid-cols-2 gap-3">
                 <FormField
                   control={form.control}
@@ -329,7 +329,7 @@ export function PassengerMode() {
                 />
               </div>
               <p className="text-xs text-muted-foreground">{t("passenger.depart.hint")}</p>
-            </FormItem>
+            </div>
 
             <FormField
               control={form.control}
