@@ -92,6 +92,8 @@ const translations: Record<Language, Dict> = {
     "driver.onboard.title": "Айдоочу катары катталыңыз",
     "driver.onboard.desc": "Атыңызды жана телефонуңузду бир жолу гана жазыңыз. Андан кийин буйрутмалар бир баскычта кабыл алынат.",
     "driver.onboard.submit": "Сактоо жана уланту",
+    "combobox.search": "Шаарды издөө...",
+    "combobox.empty": "Эч нерсе табылган жок",
 
     "time.now": "азыр эле",
     "time.minutes": "{n} мүнөт мурун",
@@ -187,6 +189,8 @@ const translations: Record<Language, Dict> = {
     "driver.onboard.title": "Зарегистрируйтесь как водитель",
     "driver.onboard.desc": "Введите имя и телефон один раз. После этого заявки принимаются в один клик.",
     "driver.onboard.submit": "Сохранить и продолжить",
+    "combobox.search": "Поиск города...",
+    "combobox.empty": "Ничего не найдено",
 
     "time.now": "только что",
     "time.minutes": "{n} мин назад",

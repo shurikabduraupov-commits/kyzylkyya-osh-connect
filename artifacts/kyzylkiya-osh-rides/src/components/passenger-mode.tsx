@@ -17,6 +17,7 @@ import { MapPin, Users, CheckCircle2, Phone, Search, Car, ArrowRight, Navigation
 import { useToast } from "@/hooks/use-toast";
 import { DEFAULT_DESTINATION, DEFAULT_ORIGIN, KYRGYZSTAN_SETTLEMENTS } from "@/lib/settlements";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
+import { SettlementCombobox } from "@/components/settlement-combobox";
 import { useTranslation } from "@/lib/i18n";
 import { readProfile, updateProfile } from "@/lib/profile";
 
@@ -186,23 +187,14 @@ export function PassengerMode() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-foreground">{t("passenger.origin.label")}</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="h-12 text-base">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <Navigation className="w-5 h-5 text-muted-foreground shrink-0" />
-                            <SelectValue placeholder={t("passenger.origin.placeholder")} />
-                          </div>
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="max-h-[280px]">
-                        {KYRGYZSTAN_SETTLEMENTS.map((settlement) => (
-                          <SelectItem key={settlement} value={settlement}>
-                            {settlement}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <SettlementCombobox
+                        value={field.value}
+                        onChange={field.onChange}
+                        options={KYRGYZSTAN_SETTLEMENTS.map((s) => ({ value: s, label: s }))}
+                        placeholder={t("passenger.origin.placeholder")}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -214,23 +206,14 @@ export function PassengerMode() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-foreground">{t("passenger.destination.label")}</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="h-12 text-base">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <MapPin className="w-5 h-5 text-muted-foreground shrink-0" />
-                            <SelectValue placeholder={t("passenger.destination.placeholder")} />
-                          </div>
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="max-h-[280px]">
-                        {KYRGYZSTAN_SETTLEMENTS.map((settlement) => (
-                          <SelectItem key={settlement} value={settlement}>
-                            {settlement}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <SettlementCombobox
+                        value={field.value}
+                        onChange={field.onChange}
+                        options={KYRGYZSTAN_SETTLEMENTS.map((s) => ({ value: s, label: s }))}
+                        placeholder={t("passenger.destination.placeholder")}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

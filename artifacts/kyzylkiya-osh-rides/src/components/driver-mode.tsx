@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MapPin, Users, Clock, Phone, Navigation, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ALL_ROUTES_VALUE, KYRGYZSTAN_SETTLEMENTS } from "@/lib/settlements";
+import { SettlementCombobox } from "@/components/settlement-combobox";
 import { useTranslation } from "@/lib/i18n";
 import { readProfile, updateProfile } from "@/lib/profile";
 
@@ -248,33 +249,27 @@ export function DriverMode() {
         <CardContent className="p-4 space-y-3">
           <p className="text-sm font-semibold text-foreground">{t("driver.filter.title")}</p>
           <div className="grid grid-cols-1 gap-3">
-            <Select value={originFilter} onValueChange={setOriginFilter}>
-              <SelectTrigger className="h-11">
-                <SelectValue placeholder={t("driver.filter.from")} />
-              </SelectTrigger>
-              <SelectContent className="max-h-[280px]">
-                <SelectItem value={ALL_ROUTES_VALUE}>{t("driver.filter.all-from")}</SelectItem>
-                {KYRGYZSTAN_SETTLEMENTS.map((settlement) => (
-                  <SelectItem key={settlement} value={settlement}>
-                    {settlement}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SettlementCombobox
+              value={originFilter}
+              onChange={setOriginFilter}
+              options={[
+                { value: ALL_ROUTES_VALUE, label: t("driver.filter.all-from") },
+                ...KYRGYZSTAN_SETTLEMENTS.map((s) => ({ value: s, label: s })),
+              ]}
+              placeholder={t("driver.filter.from")}
+              className="h-11"
+            />
 
-            <Select value={destinationFilter} onValueChange={setDestinationFilter}>
-              <SelectTrigger className="h-11">
-                <SelectValue placeholder={t("driver.filter.to")} />
-              </SelectTrigger>
-              <SelectContent className="max-h-[280px]">
-                <SelectItem value={ALL_ROUTES_VALUE}>{t("driver.filter.all-to")}</SelectItem>
-                {KYRGYZSTAN_SETTLEMENTS.map((settlement) => (
-                  <SelectItem key={settlement} value={settlement}>
-                    {settlement}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SettlementCombobox
+              value={destinationFilter}
+              onChange={setDestinationFilter}
+              options={[
+                { value: ALL_ROUTES_VALUE, label: t("driver.filter.all-to") },
+                ...KYRGYZSTAN_SETTLEMENTS.map((s) => ({ value: s, label: s })),
+              ]}
+              placeholder={t("driver.filter.to")}
+              className="h-11"
+            />
           </div>
         </CardContent>
       </Card>
