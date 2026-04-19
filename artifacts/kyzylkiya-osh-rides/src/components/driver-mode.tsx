@@ -162,6 +162,14 @@ export function DriverMode() {
         .refine(
           (v) => combineDateTime(v.departDay, v.departBefore).getTime() > combineDateTime(v.departDay, v.departAfter).getTime(),
           { message: t("passenger.error.depart-order"), path: ["departBefore"] },
+        )
+        .refine(
+          (v) => combineDateTime(v.departDay, v.departAfter).getTime() >= Date.now() - 60 * 1000,
+          { message: t("passenger.error.depart-past"), path: ["departAfter"] },
+        )
+        .refine(
+          (v) => combineDateTime(v.departDay, v.departBefore).getTime() > Date.now(),
+          { message: t("passenger.error.depart-past"), path: ["departBefore"] },
         ),
     [t],
   );

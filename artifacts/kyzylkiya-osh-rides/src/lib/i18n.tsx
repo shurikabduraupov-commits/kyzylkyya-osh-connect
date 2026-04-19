@@ -107,6 +107,7 @@ const translations: Record<Language, Dict> = {
     "passenger.error.same": "Чыгуу жана баруу пункттары башка болушу керек",
     "passenger.error.notes": "500 белгиден ашпасын",
     "passenger.error.notes-required": "Кошумча эскертүү жазыңыз (мисалы: үй номери, белги)",
+    "passenger.error.depart-past": "Убакыт азыркыдан кеч болушу керек",
 
     "driver.live": "On line",
     "driver.active.title": "Активдүү заявкалар",
@@ -293,6 +294,7 @@ const translations: Record<Language, Dict> = {
     "passenger.error.same": "Пункты отправления и назначения должны различаться",
     "passenger.error.notes": "Не более 500 символов",
     "passenger.error.notes-required": "Напишите заметку (например: номер дома, ориентир)",
+    "passenger.error.depart-past": "Время должно быть позже текущего",
 
     "driver.live": "On line",
     "driver.active.title": "Активные заявки",

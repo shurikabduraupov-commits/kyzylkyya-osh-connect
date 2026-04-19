@@ -77,6 +77,26 @@ export function PassengerMode() {
             message: t("passenger.error.depart-order"),
             path: ["departBefore"],
           },
+        )
+        .refine(
+          (value) => {
+            const a = combineDateTime(value.departDay, value.departAfter).getTime();
+            return a >= Date.now() - 60 * 1000;
+          },
+          {
+            message: t("passenger.error.depart-past"),
+            path: ["departAfter"],
+          },
+        )
+        .refine(
+          (value) => {
+            const b = combineDateTime(value.departDay, value.departBefore).getTime();
+            return b > Date.now();
+          },
+          {
+            message: t("passenger.error.depart-past"),
+            path: ["departBefore"],
+          },
         ),
     [t],
   );

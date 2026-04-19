@@ -205,6 +205,10 @@ class RideHandler(BaseHTTPRequestHandler):
             if before_dt <= after_dt:
                 self._send_json(400, {"message": "«Чейин» убактысы «дан»дан кеч болушу керек"})
                 return
+            now_utc = datetime.now(timezone.utc)
+            if before_dt <= now_utc:
+                self._send_json(400, {"message": "Убакыт азыркыдан кеч болушу керек"})
+                return
             if len(origin) < 2:
                 self._send_json(400, {"message": "Кайсы жерден чыгарыңызды тандаңыз"})
                 return
@@ -280,6 +284,10 @@ class RideHandler(BaseHTTPRequestHandler):
                 return
             if before_dt <= after_dt:
                 self._send_json(400, {"message": "«Чейин» убактысы «дан»дан кеч болушу керек"})
+                return
+            now_utc = datetime.now(timezone.utc)
+            if before_dt <= now_utc:
+                self._send_json(400, {"message": "Убакыт азыркыдан кеч болушу керек"})
                 return
             if len(origin) < 2 or len(destination) < 2 or origin == destination:
                 self._send_json(400, {"message": "Маршрутту туура тандаңыз"})
