@@ -15,7 +15,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MapPin, Users, CheckCircle2, Phone, Search, Car, ArrowRight, Navigation } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { DEFAULT_DESTINATION, DEFAULT_ORIGIN, KYRGYZSTAN_SETTLEMENTS } from "@/lib/settlements";
+import { DEFAULT_DESTINATION, DEFAULT_ORIGIN } from "@/lib/settlements";
+import { useAllSettlements } from "@/lib/all-settlements";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { SettlementCombobox } from "@/components/settlement-combobox";
 import { useTranslation } from "@/lib/i18n";
@@ -39,6 +40,7 @@ export function PassengerMode() {
   const { t, lang } = useTranslation();
   const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
   const { toast } = useToast();
+  const settlements = useAllSettlements();
 
   const createRideSchema = useMemo(
     () =>
@@ -241,7 +243,7 @@ export function PassengerMode() {
                               form.setValue("destination", "", { shouldValidate: true });
                             }
                           }}
-                          options={KYRGYZSTAN_SETTLEMENTS
+                          options={settlements
                             .filter((s) => s !== destination)
                             .map((s) => ({ value: s, label: s }))}
                           placeholder={t("passenger.origin.placeholder")}
@@ -270,7 +272,7 @@ export function PassengerMode() {
                               form.setValue("origin", "", { shouldValidate: true });
                             }
                           }}
-                          options={KYRGYZSTAN_SETTLEMENTS
+                          options={settlements
                             .filter((s) => s !== origin)
                             .map((s) => ({ value: s, label: s }))}
                           placeholder={t("passenger.destination.placeholder")}

@@ -17,7 +17,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MapPin, Users, Clock, Phone, Navigation, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { ALL_ROUTES_VALUE, KYRGYZSTAN_SETTLEMENTS } from "@/lib/settlements";
+import { ALL_ROUTES_VALUE } from "@/lib/settlements";
+import { useAllSettlements } from "@/lib/all-settlements";
 import { SettlementCombobox } from "@/components/settlement-combobox";
 import { useTranslation } from "@/lib/i18n";
 import { readProfile, updateProfile } from "@/lib/profile";
@@ -44,6 +45,7 @@ export function DriverMode() {
   const [destinationFilter, setDestinationFilter] = useState(ALL_ROUTES_VALUE);
   const [savedProfile, setSavedProfile] = useState(() => readProfile());
   const hasSavedProfile = savedProfile.driverName.length >= 2 && savedProfile.driverPhone.length >= 5;
+  const settlements = useAllSettlements();
 
   const acceptRideSchema = useMemo(
     () =>
@@ -267,7 +269,7 @@ export function DriverMode() {
               onChange={setOriginFilter}
               options={[
                 { value: ALL_ROUTES_VALUE, label: t("driver.filter.all-from") },
-                ...KYRGYZSTAN_SETTLEMENTS.map((s) => ({ value: s, label: s })),
+                ...settlements.map((s) => ({ value: s, label: s })),
               ]}
               placeholder={t("driver.filter.from")}
               className="h-11"
@@ -278,7 +280,7 @@ export function DriverMode() {
               onChange={setDestinationFilter}
               options={[
                 { value: ALL_ROUTES_VALUE, label: t("driver.filter.all-to") },
-                ...KYRGYZSTAN_SETTLEMENTS.map((s) => ({ value: s, label: s })),
+                ...settlements.map((s) => ({ value: s, label: s })),
               ]}
               placeholder={t("driver.filter.to")}
               className="h-11"
