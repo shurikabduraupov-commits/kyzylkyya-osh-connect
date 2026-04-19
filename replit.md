@@ -18,10 +18,11 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 ## Current Artifacts
 
-- **Кызыл-Кия — Ош** (`artifacts/kyzylkiya-osh-rides`): mobile-first ride request web app for passengers and drivers on the Kyzyl-Kiya to Osh route.
+- **Кызыл-Кия — Ош** (`artifacts/kyzylkiya-osh-rides`): mobile-first ride request web app for passengers and drivers across Kyrgyzstan.
   - Frontend: React + Vite at `/`
   - Backend: Python standard-library HTTP server at `/rides-api`
-  - Main flow: passenger creates a pickup request, driver accepts it with name and phone, passenger sees driver contact details.
+  - Main flow: passenger selects an origin settlement, destination settlement, pickup address, and seat count; driver sees active requests with route details, can filter by origin/destination, accepts with name and phone, and passenger sees driver contact details.
+  - UI language: Kyrgyz in Cyrillic script.
 
 ## Key Commands
 

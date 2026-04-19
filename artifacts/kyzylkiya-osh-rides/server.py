@@ -12,6 +12,10 @@ def now_iso():
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+def make_route(origin, destination):
+    return f"{origin} → {destination}"
+
+
 class RideHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         return
@@ -78,6 +82,8 @@ class RideHandler(BaseHTTPRequestHandler):
             self._send_json(400, {"message": "JSON туура эмес"})
             return
         if parts == ["requests"]:
+            origin = str(data.get("origin", "")).strip()
+            destination = str(data.get("destination", "")).strip()
             pickup_address = str(data.get("pickupAddress", "")).strip()
             seats = data.get("seats")
             try:
@@ -85,17 +91,28 @@ class RideHandler(BaseHTTPRequestHandler):
             except (TypeError, ValueError):
                 self._send_json(400, {"message": "Орундардын санын жазыңыз"})
                 return
+            if len(origin) < 2:
+                self._send_json(400, {"message": "Кайсы жерден чыгарыңызды тандаңыз"})
+                return
+            if len(destination) < 2:
+                self._send_json(400, {"message": "Каякка барарыңызды тандаңыз"})
+                return
+            if origin == destination:
+                self._send_json(400, {"message": "Чыгуу жана баруу пункттары башка болушу керек"})
+                return
             if len(pickup_address) < 3:
-                self._send_json(400, {"message": "Кызыл-Кыядагы даректи жазыңыз"})
+                self._send_json(400, {"message": "Так даректи жазыңыз"})
                 return
             if seats_number < 1 or seats_number > 7:
                 self._send_json(400, {"message": "Орундардын саны 1ден 7ге чейин болушу керек"})
                 return
             ride = {
                 "id": uuid.uuid4().hex,
+                "origin": origin,
+                "destination": destination,
                 "pickupAddress": pickup_address,
                 "seats": seats_number,
-                "route": "Кызыл-Кыя → Ош",
+                "route": make_route(origin, destination),
                 "status": "active",
                 "driverName": None,
                 "driverPhone": None,

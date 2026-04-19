@@ -20,6 +20,8 @@ export const HealthCheckResponse = zod.object({
  */
 export const ListRideRequestsResponseItem = zod.object({
   id: zod.string(),
+  origin: zod.string(),
+  destination: zod.string(),
   pickupAddress: zod.string(),
   seats: zod.number(),
   route: zod.string(),
@@ -34,11 +36,17 @@ export const ListRideRequestsResponse = zod.array(ListRideRequestsResponseItem);
 /**
  * @summary Create a passenger ride request
  */
+export const createRideRequestBodyOriginMin = 2;
+
+export const createRideRequestBodyDestinationMin = 2;
+
 export const createRideRequestBodyPickupAddressMin = 3;
 
 export const createRideRequestBodySeatsMax = 7;
 
 export const CreateRideRequestBody = zod.object({
+  origin: zod.string().min(createRideRequestBodyOriginMin),
+  destination: zod.string().min(createRideRequestBodyDestinationMin),
   pickupAddress: zod.string().min(createRideRequestBodyPickupAddressMin),
   seats: zod.number().min(1).max(createRideRequestBodySeatsMax),
 });
@@ -52,6 +60,8 @@ export const GetRideRequestParams = zod.object({
 
 export const GetRideRequestResponse = zod.object({
   id: zod.string(),
+  origin: zod.string(),
+  destination: zod.string(),
   pickupAddress: zod.string(),
   seats: zod.number(),
   route: zod.string(),
@@ -80,6 +90,8 @@ export const AcceptRideRequestBody = zod.object({
 
 export const AcceptRideRequestResponse = zod.object({
   id: zod.string(),
+  origin: zod.string(),
+  destination: zod.string(),
   pickupAddress: zod.string(),
   seats: zod.number(),
   route: zod.string(),

@@ -7,6 +7,10 @@
  */
 
 export interface CreateRideRequest {
+  /** @minLength 2 */
+  origin: string;
+  /** @minLength 2 */
+  destination: string;
   /** @minLength 3 */
   pickupAddress: string;
   /**

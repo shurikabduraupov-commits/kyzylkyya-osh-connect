@@ -132,6 +132,12 @@ components:
     CreateRideRequest:
       type: object
       properties:
+        origin:
+          type: string
+          minLength: 2
+        destination:
+          type: string
+          minLength: 2
         pickupAddress:
           type: string
           minLength: 3
@@ -140,6 +146,8 @@ components:
           minimum: 1
           maximum: 7
       required:
+        - origin
+        - destination
         - pickupAddress
         - seats
     AcceptRideRequest:
@@ -158,6 +166,10 @@ components:
       type: object
       properties:
         id:
+          type: string
+        origin:
+          type: string
+        destination:
           type: string
         pickupAddress:
           type: string
@@ -182,6 +194,8 @@ components:
           nullable: true
       required:
         - id
+        - origin
+        - destination
         - pickupAddress
         - seats
         - route

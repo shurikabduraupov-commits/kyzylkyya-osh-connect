@@ -9,6 +9,8 @@ import type { RideStatus } from "./rideStatus";
 
 export interface RideRequest {
   id: string;
+  origin: string;
+  destination: string;
   pickupAddress: string;
   seats: number;
   route: string;

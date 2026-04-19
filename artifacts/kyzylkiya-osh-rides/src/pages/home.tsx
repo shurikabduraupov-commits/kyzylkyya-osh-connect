@@ -1,7 +1,7 @@
 import { useGetRideStats, getGetRideStatsQueryKey } from "@workspace/api-client-react";
 import { PassengerMode } from "@/components/passenger-mode";
 import { DriverMode } from "@/components/driver-mode";
-import { Map, ArrowRight, UserRound, CarFront } from "lucide-react";
+import { Map, UserRound, CarFront } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function Home() {
@@ -36,10 +36,9 @@ export function Home() {
             )}
           </div>
 
-          <div className="flex items-center gap-3 text-white/90 font-medium text-lg">
-            <span>Кызыл-Кыя</span>
-            <ArrowRight className="w-5 h-5 opacity-70" />
-            <span>Ош</span>
+          <div className="space-y-1 text-white/90">
+            <p className="font-medium text-lg">Кыргызстан боюнча сапарлар</p>
+            <p className="text-sm opacity-85">Каалаган багытты тандап, тез машина табыңыз</p>
           </div>
         </div>
       </header>

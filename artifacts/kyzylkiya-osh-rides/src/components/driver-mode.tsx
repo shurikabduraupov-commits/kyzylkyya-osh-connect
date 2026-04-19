@@ -14,8 +14,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { MapPin, Users, Clock, Phone, Navigation } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MapPin, Users, Clock, Phone, Navigation, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ALL_ROUTES_VALUE, KYRGYZSTAN_SETTLEMENTS } from "@/lib/settlements";
 
 const acceptRideSchema = z.object({
   driverName: z.string().min(2, "Атыңыз өтө кыска"),
@@ -42,6 +44,8 @@ export function DriverMode() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const [originFilter, setOriginFilter] = useState(ALL_ROUTES_VALUE);
+  const [destinationFilter, setDestinationFilter] = useState(ALL_ROUTES_VALUE);
 
   const { data: requests = [], isPending } = useListRideRequests({
     query: {
@@ -87,7 +91,12 @@ export function DriverMode() {
     });
   };
 
-  const activeRequests = requests.filter((request) => request.status === "active");
+  const activeRequests = requests.filter((request) => {
+    if (request.status !== "active") return false;
+    if (originFilter !== ALL_ROUTES_VALUE && request.origin !== originFilter) return false;
+    if (destinationFilter !== ALL_ROUTES_VALUE && request.destination !== destinationFilter) return false;
+    return true;
+  });
 
   return (
     <div className="space-y-4">
@@ -98,6 +107,41 @@ export function DriverMode() {
           Түз эфир
         </div>
       </div>
+
+      <Card className="shadow-sm border-border">
+        <CardContent className="p-4 space-y-3">
+          <p className="text-sm font-semibold text-foreground">Багыт боюнча чыпкалоо</p>
+          <div className="grid grid-cols-1 gap-3">
+            <Select value={originFilter} onValueChange={setOriginFilter}>
+              <SelectTrigger className="h-11">
+                <SelectValue placeholder="Кайдан" />
+              </SelectTrigger>
+              <SelectContent className="max-h-[280px]">
+                <SelectItem value={ALL_ROUTES_VALUE}>Бардык чыгуу пункттары</SelectItem>
+                {KYRGYZSTAN_SETTLEMENTS.map((settlement) => (
+                  <SelectItem key={settlement} value={settlement}>
+                    {settlement}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={destinationFilter} onValueChange={setDestinationFilter}>
+              <SelectTrigger className="h-11">
+                <SelectValue placeholder="Каякка" />
+              </SelectTrigger>
+              <SelectContent className="max-h-[280px]">
+                <SelectItem value={ALL_ROUTES_VALUE}>Бардык баруу пункттары</SelectItem>
+                {KYRGYZSTAN_SETTLEMENTS.map((settlement) => (
+                  <SelectItem key={settlement} value={settlement}>
+                    {settlement}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
       {isPending ? (
         <div className="space-y-3">
@@ -111,8 +155,8 @@ export function DriverMode() {
         <Card className="border-dashed border-2 border-border/60 bg-transparent">
           <CardContent className="p-10 flex flex-col items-center justify-center text-center text-muted-foreground">
             <Navigation className="w-10 h-10 mb-3 opacity-20" />
-            <p className="font-medium text-foreground">Азыр активдүү заявка жок</p>
-            <p className="text-sm">Кызыл-Кыядагы жүргүнчүлөрдү күтүп жатабыз...</p>
+            <p className="font-medium text-foreground">Бул багытта активдүү заявка жок</p>
+            <p className="text-sm">Жаңы жүргүнчүлөрдү күтүп жатабыз...</p>
           </CardContent>
         </Card>
       ) : (
@@ -120,13 +164,19 @@ export function DriverMode() {
           {activeRequests.map((request) => (
             <Card key={request.id} className="overflow-hidden border-border shadow-sm hover:border-primary/30 transition-colors">
               <CardContent className="p-0">
-                <div className="p-5">
-                  <div className="flex justify-between items-start mb-3">
+                <div className="p-5 space-y-3">
+                  <div className="flex items-center gap-2 text-primary font-semibold">
+                    <span>{request.origin}</span>
+                    <ArrowRight className="w-4 h-4" />
+                    <span>{request.destination}</span>
+                  </div>
+                  <div className="flex justify-between items-start">
                     <div className="flex items-start gap-3">
                       <div className="mt-0.5 w-8 h-8 rounded-full bg-accent flex items-center justify-center shrink-0">
                         <MapPin className="w-4 h-4 text-foreground/70" />
                       </div>
                       <div>
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium">Алып кетүү дареги</p>
                         <p className="font-semibold text-lg leading-tight">{request.pickupAddress}</p>
                         <div className="flex items-center gap-3 mt-1.5 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1 font-medium text-foreground/80">

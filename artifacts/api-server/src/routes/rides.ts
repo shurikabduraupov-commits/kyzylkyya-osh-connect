@@ -3,6 +3,8 @@ import { Router, type IRouter } from "express";
 
 type RideRequest = {
   id: string;
+  origin: string;
+  destination: string;
   pickupAddress: string;
   seats: number;
   route: string;
@@ -16,16 +18,35 @@ type RideRequest = {
 const router: IRouter = Router();
 const requests: RideRequest[] = [];
 
+const makeRoute = (origin: string, destination: string) => `${origin} → ${destination}`;
+
 router.get("/requests", (_req, res) => {
   res.json(requests.filter((request) => request.status === "active"));
 });
 
 router.post("/requests", (req, res) => {
+  const origin = String(req.body?.origin ?? "").trim();
+  const destination = String(req.body?.destination ?? "").trim();
   const pickupAddress = String(req.body?.pickupAddress ?? "").trim();
   const seats = Number(req.body?.seats);
 
+  if (origin.length < 2) {
+    res.status(400).json({ message: "Кайсы жерден чыгарыңызды тандаңыз" });
+    return;
+  }
+
+  if (destination.length < 2) {
+    res.status(400).json({ message: "Каякка барарыңызды тандаңыз" });
+    return;
+  }
+
+  if (origin === destination) {
+    res.status(400).json({ message: "Чыгуу жана баруу пункттары башка болушу керек" });
+    return;
+  }
+
   if (pickupAddress.length < 3) {
-    res.status(400).json({ message: "Кызыл-Кыядагы даректи жазыңыз" });
+    res.status(400).json({ message: "Так даректи жазыңыз" });
     return;
   }
 
@@ -36,9 +57,11 @@ router.post("/requests", (req, res) => {
 
   const ride: RideRequest = {
     id: randomUUID().replaceAll("-", ""),
+    origin,
+    destination,
     pickupAddress,
     seats,
-    route: "Кызыл-Кыя → Ош",
+    route: makeRoute(origin, destination),
     status: "active",
     driverName: null,
     driverPhone: null,

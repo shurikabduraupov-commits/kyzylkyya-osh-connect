@@ -12,12 +12,18 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, Users, CheckCircle2, Phone, Search, Car, ArrowRight } from "lucide-react";
+import { MapPin, Users, CheckCircle2, Phone, Search, Car, ArrowRight, Navigation } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { DEFAULT_DESTINATION, DEFAULT_ORIGIN, KYRGYZSTAN_SETTLEMENTS } from "@/lib/settlements";
 
 const createRideSchema = z.object({
+  origin: z.string().min(2, "Кайсы жерден чыгарыңызды тандаңыз"),
+  destination: z.string().min(2, "Каякка барарыңызды тандаңыз"),
   pickupAddress: z.string().min(3, "Так даректи жазыңыз"),
   seats: z.coerce.number().min(1).max(7),
+}).refine((value) => value.origin !== value.destination, {
+  message: "Чыгуу жана баруу пункттары башка болушу керек",
+  path: ["destination"],
 });
 
 type CreateRideValues = z.infer<typeof createRideSchema>;
@@ -29,6 +35,8 @@ export function PassengerMode() {
   const form = useForm<CreateRideValues>({
     resolver: zodResolver(createRideSchema),
     defaultValues: {
+      origin: DEFAULT_ORIGIN,
+      destination: DEFAULT_DESTINATION,
       pickupAddress: "",
       seats: 1,
     },
@@ -78,7 +86,7 @@ export function PassengerMode() {
 
   if (activeRequestId) {
     if (isRequestLoading) {
-      return <WaitingCard />;
+      return <WaitingCard route={form.getValues("origin") + " → " + form.getValues("destination")} />;
     }
 
     if (activeRequest?.status === "accepted") {
@@ -91,7 +99,7 @@ export function PassengerMode() {
             <div>
               <h3 className="font-display font-bold text-2xl">Машина табылды</h3>
               <p className="text-primary-foreground/90 text-sm mt-1">
-                Ошко сапарыңыз тастыкталды
+                {activeRequest.route} сапарыңыз тастыкталды
               </p>
             </div>
           </div>
@@ -132,24 +140,82 @@ export function PassengerMode() {
       );
     }
 
-    return <WaitingCard />;
+    return <WaitingCard route={activeRequest?.route || form.getValues("origin") + " → " + form.getValues("destination")} />;
   }
 
   return (
     <Card className="w-full shadow-sm border-border">
       <CardHeader className="pb-4">
-        <CardTitle className="font-display text-2xl font-bold">Кызыл-Кыядан Ошко</CardTitle>
-        <CardDescription>Азыр Ошко бара турган ишенимдүү машинаны табыңыз.</CardDescription>
+        <CardTitle className="font-display text-2xl font-bold">Багытты тандаңыз</CardTitle>
+        <CardDescription>Кыргызстандын ичиндеги каалаган шаар же айыл боюнча машина табыңыз.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+            <div className="grid grid-cols-1 gap-4">
+              <FormField
+                control={form.control}
+                name="origin"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-foreground">Кайсы жерден чыгасыз?</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="h-12 text-base">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Navigation className="w-5 h-5 text-muted-foreground shrink-0" />
+                            <SelectValue placeholder="Чыгуу пунктун тандаңыз" />
+                          </div>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="max-h-[280px]">
+                        {KYRGYZSTAN_SETTLEMENTS.map((settlement) => (
+                          <SelectItem key={settlement} value={settlement}>
+                            {settlement}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="destination"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-foreground">Каякка барасыз?</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="h-12 text-base">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <MapPin className="w-5 h-5 text-muted-foreground shrink-0" />
+                            <SelectValue placeholder="Баруу пунктун тандаңыз" />
+                          </div>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="max-h-[280px]">
+                        {KYRGYZSTAN_SETTLEMENTS.map((settlement) => (
+                          <SelectItem key={settlement} value={settlement}>
+                            {settlement}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <FormField
               control={form.control}
               name="pickupAddress"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-foreground">Сиз кайсы жердесиз?</FormLabel>
+                  <FormLabel className="text-foreground">Так кайсы жерден алып кетсин?</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -173,7 +239,7 @@ export function PassengerMode() {
                   <FormLabel className="text-foreground">Канча орун керек?</FormLabel>
                   <Select
                     onValueChange={(val) => field.onChange(Number(val))}
-                    defaultValue={field.value.toString()}
+                    value={field.value.toString()}
                   >
                     <FormControl>
                       <SelectTrigger className="h-12 text-base">
@@ -213,7 +279,7 @@ export function PassengerMode() {
   );
 }
 
-function WaitingCard() {
+function WaitingCard({ route }: { route: string }) {
   return (
     <Card className="w-full shadow-md border-border bg-card overflow-hidden">
       <CardContent className="p-8 flex flex-col items-center justify-center min-h-[300px] text-center space-y-4">
@@ -225,8 +291,9 @@ function WaitingCard() {
         </div>
         <div className="space-y-2">
           <h3 className="font-display font-semibold text-xl">Айдоочу изделүүдө</h3>
+          <p className="text-foreground font-medium">{route}</p>
           <p className="text-muted-foreground text-sm max-w-[250px]">
-            Заявкаңыз Кызыл-Кыядагы айдоочуларга көрсөтүлүүдө. Адатта 2-5 мүнөт талап кылынат.
+            Заявкаңыз ушул багыттагы айдоочуларга көрсөтүлүүдө. Адатта 2-5 мүнөт талап кылынат.
           </p>
         </div>
       </CardContent>

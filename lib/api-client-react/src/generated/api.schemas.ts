@@ -17,6 +17,10 @@ export const RideStatus = {
 } as const;
 
 export interface CreateRideRequest {
+  /** @minLength 2 */
+  origin: string;
+  /** @minLength 2 */
+  destination: string;
   /** @minLength 3 */
   pickupAddress: string;
   /**
@@ -35,6 +39,8 @@ export interface AcceptRideRequest {
 
 export interface RideRequest {
   id: string;
+  origin: string;
+  destination: string;
   pickupAddress: string;
   seats: number;
   route: string;
