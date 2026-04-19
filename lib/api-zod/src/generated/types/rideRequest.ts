@@ -18,6 +18,8 @@ export interface RideRequest {
   status: RideStatus;
   driverName: string | null;
   driverPhone: string | null;
+  departAfter: Date;
+  departBefore: Date;
   createdAt: Date;
   acceptedAt: Date | null;
 }

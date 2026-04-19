@@ -22,6 +22,19 @@ import { SettlementCombobox } from "@/components/settlement-combobox";
 import { useTranslation } from "@/lib/i18n";
 import { readProfile, updateProfile } from "@/lib/profile";
 
+function formatDepartTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const now = new Date();
+  const sameDay =
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate();
+  const time = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  if (sameDay) return time;
+  return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")} ${time}`;
+}
+
 export function DriverMode() {
   const { t, lang } = useTranslation();
   const { toast } = useToast();
@@ -311,6 +324,12 @@ export function DriverMode() {
                           {t("driver.card.address")}
                         </p>
                         <p className="font-semibold text-lg leading-tight">{request.pickupAddress}</p>
+                        <p className="mt-1.5 text-sm font-medium text-primary">
+                          {t("driver.card.depart", {
+                            from: formatDepartTime(request.departAfter),
+                            to: formatDepartTime(request.departBefore),
+                          })}
+                        </p>
                         {request.notes && (
                           <p className="mt-1.5 text-sm text-foreground/80 bg-muted/50 rounded-md px-2.5 py-1.5 leading-snug">
                             {request.notes}

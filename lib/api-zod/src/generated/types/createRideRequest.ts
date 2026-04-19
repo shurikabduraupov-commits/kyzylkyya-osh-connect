@@ -20,4 +20,6 @@ export interface CreateRideRequest {
    * @maximum 7
    */
   seats: number;
+  departAfter: Date;
+  departBefore: Date;
 }

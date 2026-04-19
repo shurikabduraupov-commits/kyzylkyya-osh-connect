@@ -29,6 +29,8 @@ export const ListRideRequestsResponseItem = zod.object({
   status: zod.enum(["active", "accepted"]),
   driverName: zod.string().nullable(),
   driverPhone: zod.string().nullable(),
+  departAfter: zod.coerce.date(),
+  departBefore: zod.coerce.date(),
   createdAt: zod.coerce.date(),
   acceptedAt: zod.coerce.date().nullable(),
 });
@@ -53,6 +55,8 @@ export const CreateRideRequestBody = zod.object({
   pickupAddress: zod.string().min(createRideRequestBodyPickupAddressMin),
   notes: zod.string().max(createRideRequestBodyNotesMax).optional(),
   seats: zod.number().min(1).max(createRideRequestBodySeatsMax),
+  departAfter: zod.coerce.date(),
+  departBefore: zod.coerce.date(),
 });
 
 /**
@@ -73,6 +77,8 @@ export const GetRideRequestResponse = zod.object({
   status: zod.enum(["active", "accepted"]),
   driverName: zod.string().nullable(),
   driverPhone: zod.string().nullable(),
+  departAfter: zod.coerce.date(),
+  departBefore: zod.coerce.date(),
   createdAt: zod.coerce.date(),
   acceptedAt: zod.coerce.date().nullable(),
 });
@@ -104,6 +110,8 @@ export const AcceptRideRequestResponse = zod.object({
   status: zod.enum(["active", "accepted"]),
   driverName: zod.string().nullable(),
   driverPhone: zod.string().nullable(),
+  departAfter: zod.coerce.date(),
+  departBefore: zod.coerce.date(),
   createdAt: zod.coerce.date(),
   acceptedAt: zod.coerce.date().nullable(),
 });

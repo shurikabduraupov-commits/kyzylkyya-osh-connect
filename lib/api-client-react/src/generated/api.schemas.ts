@@ -30,6 +30,8 @@ export interface CreateRideRequest {
    * @maximum 7
    */
   seats: number;
+  departAfter: string;
+  departBefore: string;
 }
 
 export interface AcceptRideRequest {
@@ -50,6 +52,8 @@ export interface RideRequest {
   status: RideStatus;
   driverName: string | null;
   driverPhone: string | null;
+  departAfter: string;
+  departBefore: string;
   createdAt: string;
   acceptedAt: string | null;
 }

@@ -94,6 +94,25 @@ class RideHandler(BaseHTTPRequestHandler):
             except (TypeError, ValueError):
                 self._send_json(400, {"message": "Орундардын санын жазыңыз"})
                 return
+            depart_after = str(data.get("departAfter", "")).strip()
+            depart_before = str(data.get("departBefore", "")).strip()
+
+            def _parse_iso(value):
+                if not value:
+                    return None
+                try:
+                    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+                except ValueError:
+                    return None
+
+            after_dt = _parse_iso(depart_after)
+            before_dt = _parse_iso(depart_before)
+            if after_dt is None or before_dt is None:
+                self._send_json(400, {"message": "Чыгуу убактысын тандаңыз"})
+                return
+            if before_dt <= after_dt:
+                self._send_json(400, {"message": "«Чейин» убактысы «дан»дан кеч болушу керек"})
+                return
             if len(origin) < 2:
                 self._send_json(400, {"message": "Кайсы жерден чыгарыңызды тандаңыз"})
                 return
@@ -120,6 +139,8 @@ class RideHandler(BaseHTTPRequestHandler):
                 "status": "active",
                 "driverName": None,
                 "driverPhone": None,
+                "departAfter": after_dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
+                "departBefore": before_dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
                 "createdAt": now_iso(),
                 "acceptedAt": None,
             }

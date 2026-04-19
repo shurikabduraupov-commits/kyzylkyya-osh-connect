@@ -21,6 +21,11 @@ import { SettlementCombobox } from "@/components/settlement-combobox";
 import { useTranslation } from "@/lib/i18n";
 import { readProfile, updateProfile } from "@/lib/profile";
 
+function toLocalInput(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export function PassengerMode() {
   const { t, lang } = useTranslation();
   const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
@@ -35,15 +40,40 @@ export function PassengerMode() {
           pickupAddress: z.string().min(3, t("passenger.error.address")),
           notes: z.string().max(500, t("passenger.error.notes")).optional(),
           seats: z.coerce.number().min(1).max(7),
+          departAfter: z.string().min(1, t("passenger.error.depart-required")),
+          departBefore: z.string().min(1, t("passenger.error.depart-required")),
         })
         .refine((value) => value.origin !== value.destination, {
           message: t("passenger.error.same"),
           path: ["destination"],
-        }),
+        })
+        .refine(
+          (value) => {
+            const a = Date.parse(value.departAfter);
+            const b = Date.parse(value.departBefore);
+            if (Number.isNaN(a) || Number.isNaN(b)) return false;
+            return b > a;
+          },
+          {
+            message: t("passenger.error.depart-order"),
+            path: ["departBefore"],
+          },
+        ),
     [t],
   );
 
   type CreateRideValues = z.infer<typeof createRideSchema>;
+
+  const defaultDepartAfter = useMemo(() => {
+    const d = new Date(Date.now() + 30 * 60 * 1000);
+    d.setSeconds(0, 0);
+    return toLocalInput(d);
+  }, []);
+  const defaultDepartBefore = useMemo(() => {
+    const d = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    d.setSeconds(0, 0);
+    return toLocalInput(d);
+  }, []);
 
   const initialProfile = useMemo(() => readProfile(), []);
   const form = useForm<CreateRideValues>({
@@ -54,6 +84,8 @@ export function PassengerMode() {
       pickupAddress: "",
       notes: "",
       seats: 1,
+      departAfter: defaultDepartAfter,
+      departBefore: defaultDepartBefore,
     },
   });
 
@@ -100,6 +132,8 @@ export function PassengerMode() {
     const payload = {
       ...data,
       notes: data.notes?.trim() ? data.notes.trim() : undefined,
+      departAfter: new Date(data.departAfter).toISOString(),
+      departBefore: new Date(data.departBefore).toISOString(),
     };
     updateProfile({ lastOrigin: data.origin, lastDestination: data.destination });
     createMutation.mutate({ data: payload });
@@ -259,6 +293,43 @@ export function PassengerMode() {
                 </FormItem>
               )}
             />
+
+            <FormItem>
+              <FormLabel className="text-foreground">{t("passenger.depart.label")}</FormLabel>
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="departAfter"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs text-muted-foreground font-normal">
+                        {t("passenger.depart.from")}
+                      </FormLabel>
+                      <FormControl>
+                        <Input type="datetime-local" className="h-12 text-base" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="departBefore"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs text-muted-foreground font-normal">
+                        {t("passenger.depart.to")}
+                      </FormLabel>
+                      <FormControl>
+                        <Input type="datetime-local" className="h-12 text-base" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">{t("passenger.depart.hint")}</p>
+            </FormItem>
 
             <FormField
               control={form.control}

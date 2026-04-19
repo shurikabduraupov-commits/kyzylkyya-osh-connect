@@ -148,11 +148,19 @@ components:
           type: integer
           minimum: 1
           maximum: 7
+        departAfter:
+          type: string
+          format: date-time
+        departBefore:
+          type: string
+          format: date-time
       required:
         - origin
         - destination
         - pickupAddress
         - seats
+        - departAfter
+        - departBefore
     AcceptRideRequest:
       type: object
       properties:
@@ -191,6 +199,12 @@ components:
         driverPhone:
           type: string
           nullable: true
+        departAfter:
+          type: string
+          format: date-time
+        departBefore:
+          type: string
+          format: date-time
         createdAt:
           type: string
           format: date-time
@@ -209,6 +223,8 @@ components:
         - status
         - driverName
         - driverPhone
+        - departAfter
+        - departBefore
         - createdAt
         - acceptedAt
     RideStats:

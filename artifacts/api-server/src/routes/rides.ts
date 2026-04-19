@@ -12,6 +12,8 @@ type RideRequest = {
   status: "active" | "accepted";
   driverName: string | null;
   driverPhone: string | null;
+  departAfter: string;
+  departBefore: string;
   createdAt: string;
   acceptedAt: string | null;
 };
@@ -58,6 +60,19 @@ router.post("/requests", (req, res) => {
     return;
   }
 
+  const departAfterRaw = String(req.body?.departAfter ?? "").trim();
+  const departBeforeRaw = String(req.body?.departBefore ?? "").trim();
+  const departAfterTs = Date.parse(departAfterRaw);
+  const departBeforeTs = Date.parse(departBeforeRaw);
+  if (Number.isNaN(departAfterTs) || Number.isNaN(departBeforeTs)) {
+    res.status(400).json({ message: "Чыгуу убактысын тандаңыз" });
+    return;
+  }
+  if (departBeforeTs <= departAfterTs) {
+    res.status(400).json({ message: "«Чейин» убактысы «дан»дан кеч болушу керек" });
+    return;
+  }
+
   const ride: RideRequest = {
     id: randomUUID().replaceAll("-", ""),
     origin,
@@ -69,6 +84,8 @@ router.post("/requests", (req, res) => {
     status: "active",
     driverName: null,
     driverPhone: null,
+    departAfter: new Date(departAfterTs).toISOString(),
+    departBefore: new Date(departBeforeTs).toISOString(),
     createdAt: new Date().toISOString(),
     acceptedAt: null,
   };
