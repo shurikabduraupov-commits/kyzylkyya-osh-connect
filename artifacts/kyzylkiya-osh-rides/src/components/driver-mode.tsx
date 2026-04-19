@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -18,34 +18,37 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MapPin, Users, Clock, Phone, Navigation, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ALL_ROUTES_VALUE, KYRGYZSTAN_SETTLEMENTS } from "@/lib/settlements";
-
-const acceptRideSchema = z.object({
-  driverName: z.string().min(2, "Атыңыз өтө кыска"),
-  driverPhone: z.string().min(5, "Туура телефон номерин жазыңыз"),
-});
-
-type AcceptRideValues = z.infer<typeof acceptRideSchema>;
-
-function timeAgoKg(value: string) {
-  const diffMs = Date.now() - new Date(value).getTime();
-  const minutes = Math.max(0, Math.floor(diffMs / 60000));
-
-  if (minutes < 1) return "азыр эле";
-  if (minutes < 60) return `${minutes} мүнөт мурун`;
-
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} саат мурун`;
-
-  const days = Math.floor(hours / 24);
-  return `${days} күн мурун`;
-}
+import { useTranslation } from "@/lib/i18n";
 
 export function DriverMode() {
+  const { t, lang } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [originFilter, setOriginFilter] = useState(ALL_ROUTES_VALUE);
   const [destinationFilter, setDestinationFilter] = useState(ALL_ROUTES_VALUE);
+
+  const acceptRideSchema = useMemo(
+    () =>
+      z.object({
+        driverName: z.string().min(2, t("driver.error.name")),
+        driverPhone: z.string().min(5, t("driver.error.phone")),
+      }),
+    [t],
+  );
+
+  type AcceptRideValues = z.infer<typeof acceptRideSchema>;
+
+  const timeAgo = (value: string) => {
+    const diffMs = Date.now() - new Date(value).getTime();
+    const minutes = Math.max(0, Math.floor(diffMs / 60000));
+    if (minutes < 1) return t("time.now");
+    if (minutes < 60) return t("time.minutes", { n: minutes });
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return t("time.hours", { n: hours });
+    const days = Math.floor(hours / 24);
+    return t("time.days", { n: days });
+  };
 
   const { data: requests = [], isPending } = useListRideRequests({
     query: {
@@ -58,8 +61,8 @@ export function DriverMode() {
     mutation: {
       onSuccess: () => {
         toast({
-          title: "Заказ кабыл алынды",
-          description: "Жүргүнчүгө сиздин маалыматыңыз көрсөтүлдү.",
+          title: t("driver.toast.accepted.title"),
+          description: t("driver.toast.accepted.desc"),
         });
         setSelectedRequestId(null);
         queryClient.invalidateQueries({ queryKey: getListRideRequestsQueryKey() });
@@ -67,8 +70,8 @@ export function DriverMode() {
       },
       onError: () => {
         toast({
-          title: "Ката кетти",
-          description: "Заказды кабыл алуу мүмкүн болгон жок. Балким, аны башка айдоочу алган.",
+          title: t("driver.toast.error.title"),
+          description: t("driver.toast.error.desc"),
           variant: "destructive",
         });
       },
@@ -82,6 +85,12 @@ export function DriverMode() {
       driverPhone: "",
     },
   });
+
+  useEffect(() => {
+    if (Object.keys(form.formState.errors).length > 0) {
+      void form.trigger();
+    }
+  }, [lang, form]);
 
   const onSubmit = (data: AcceptRideValues) => {
     if (!selectedRequestId) return;
@@ -101,23 +110,23 @@ export function DriverMode() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between px-1">
-        <h2 className="font-display font-bold text-xl">Активдүү заявкалар</h2>
+        <h2 className="font-display font-bold text-xl">{t("driver.active.title")}</h2>
         <div className="flex items-center text-sm font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">
           <div className="w-2 h-2 rounded-full bg-primary animate-pulse mr-2" />
-          Түз эфир
+          {t("driver.live")}
         </div>
       </div>
 
       <Card className="shadow-sm border-border">
         <CardContent className="p-4 space-y-3">
-          <p className="text-sm font-semibold text-foreground">Багыт боюнча чыпкалоо</p>
+          <p className="text-sm font-semibold text-foreground">{t("driver.filter.title")}</p>
           <div className="grid grid-cols-1 gap-3">
             <Select value={originFilter} onValueChange={setOriginFilter}>
               <SelectTrigger className="h-11">
-                <SelectValue placeholder="Кайдан" />
+                <SelectValue placeholder={t("driver.filter.from")} />
               </SelectTrigger>
               <SelectContent className="max-h-[280px]">
-                <SelectItem value={ALL_ROUTES_VALUE}>Бардык чыгуу пункттары</SelectItem>
+                <SelectItem value={ALL_ROUTES_VALUE}>{t("driver.filter.all-from")}</SelectItem>
                 {KYRGYZSTAN_SETTLEMENTS.map((settlement) => (
                   <SelectItem key={settlement} value={settlement}>
                     {settlement}
@@ -128,10 +137,10 @@ export function DriverMode() {
 
             <Select value={destinationFilter} onValueChange={setDestinationFilter}>
               <SelectTrigger className="h-11">
-                <SelectValue placeholder="Каякка" />
+                <SelectValue placeholder={t("driver.filter.to")} />
               </SelectTrigger>
               <SelectContent className="max-h-[280px]">
-                <SelectItem value={ALL_ROUTES_VALUE}>Бардык баруу пункттары</SelectItem>
+                <SelectItem value={ALL_ROUTES_VALUE}>{t("driver.filter.all-to")}</SelectItem>
                 {KYRGYZSTAN_SETTLEMENTS.map((settlement) => (
                   <SelectItem key={settlement} value={settlement}>
                     {settlement}
@@ -155,8 +164,8 @@ export function DriverMode() {
         <Card className="border-dashed border-2 border-border/60 bg-transparent">
           <CardContent className="p-10 flex flex-col items-center justify-center text-center text-muted-foreground">
             <Navigation className="w-10 h-10 mb-3 opacity-20" />
-            <p className="font-medium text-foreground">Бул багытта активдүү заявка жок</p>
-            <p className="text-sm">Жаңы жүргүнчүлөрдү күтүп жатабыз...</p>
+            <p className="font-medium text-foreground">{t("driver.empty.title")}</p>
+            <p className="text-sm">{t("driver.empty.desc")}</p>
           </CardContent>
         </Card>
       ) : (
@@ -176,7 +185,9 @@ export function DriverMode() {
                         <MapPin className="w-4 h-4 text-foreground/70" />
                       </div>
                       <div>
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium">Алып кетүү дареги</p>
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium">
+                          {t("driver.card.address")}
+                        </p>
                         <p className="font-semibold text-lg leading-tight">{request.pickupAddress}</p>
                         {request.notes && (
                           <p className="mt-1.5 text-sm text-foreground/80 bg-muted/50 rounded-md px-2.5 py-1.5 leading-snug">
@@ -186,11 +197,11 @@ export function DriverMode() {
                         <div className="flex items-center gap-3 mt-1.5 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1 font-medium text-foreground/80">
                             <Users className="w-3.5 h-3.5" />
-                            {request.seats} орун
+                            {t("driver.card.seats", { n: request.seats })}
                           </span>
                           <span className="flex items-center gap-1">
                             <Clock className="w-3.5 h-3.5" />
-                            {timeAgoKg(request.createdAt)}
+                            {timeAgo(request.createdAt)}
                           </span>
                         </div>
                       </div>
@@ -203,7 +214,7 @@ export function DriverMode() {
                     variant="default"
                     onClick={() => setSelectedRequestId(request.id)}
                   >
-                    Заказды кабыл алуу
+                    {t("driver.card.accept")}
                   </Button>
                 </div>
               </CardContent>
@@ -215,10 +226,8 @@ export function DriverMode() {
       <Dialog open={!!selectedRequestId} onOpenChange={(open) => !open && setSelectedRequestId(null)}>
         <DialogContent className="sm:max-w-md rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="font-display text-xl">Заявканы кабыл алуу</DialogTitle>
-            <DialogDescription>
-              Жүргүнчү сизди табышы үчүн маалыматыңызды жазыңыз.
-            </DialogDescription>
+            <DialogTitle className="font-display text-xl">{t("driver.dialog.title")}</DialogTitle>
+            <DialogDescription>{t("driver.dialog.desc")}</DialogDescription>
           </DialogHeader>
 
           <Form {...form}>
@@ -228,9 +237,9 @@ export function DriverMode() {
                 name="driverName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Атыңыз</FormLabel>
+                    <FormLabel>{t("driver.dialog.name")}</FormLabel>
                     <FormControl>
-                      <Input placeholder="мисалы: Азамат" className="h-12" {...field} />
+                      <Input placeholder={t("driver.dialog.name.placeholder")} className="h-12" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -242,11 +251,11 @@ export function DriverMode() {
                 name="driverPhone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Телефон номери</FormLabel>
+                    <FormLabel>{t("driver.dialog.phone")}</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <Input placeholder="+996 555 000 000" className="pl-10 h-12" {...field} />
+                        <Input placeholder={t("driver.dialog.phone.placeholder")} className="pl-10 h-12" {...field} />
                       </div>
                     </FormControl>
                     <FormMessage />
@@ -260,7 +269,7 @@ export function DriverMode() {
                   className="w-full h-12 text-base font-semibold"
                   disabled={acceptMutation.isPending}
                 >
-                  {acceptMutation.isPending ? "Ырасталууда..." : "Ырастап, маалыматты жөнөтүү"}
+                  {acceptMutation.isPending ? t("driver.dialog.submit.loading") : t("driver.dialog.submit")}
                 </Button>
               </DialogFooter>
             </form>

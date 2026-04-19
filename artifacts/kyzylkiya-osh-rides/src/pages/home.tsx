@@ -1,10 +1,12 @@
 import { useGetRideStats, getGetRideStatsQueryKey } from "@workspace/api-client-react";
 import { PassengerMode } from "@/components/passenger-mode";
 import { DriverMode } from "@/components/driver-mode";
-import { Map, UserRound, CarFront } from "lucide-react";
+import { Map, UserRound, CarFront, Languages } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useTranslation } from "@/lib/i18n";
 
 export function Home() {
+  const { t, lang, toggle } = useTranslation();
   const { data: stats } = useGetRideStats({
     query: {
       refetchInterval: 10000,
@@ -20,28 +22,61 @@ export function Home() {
         </div>
 
         <div className="max-w-md mx-auto relative z-10">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              <div className="bg-white/20 p-2 rounded-xl backdrop-blur-sm">
+          <div className="flex items-center justify-between mb-6 gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="bg-white/20 p-2 rounded-xl backdrop-blur-sm shrink-0">
                 <Map className="w-6 h-6 text-white" />
               </div>
-              <div>
-                <h1 className="font-display text-2xl font-bold tracking-tight leading-none">МАК</h1>
-                <p className="text-[11px] uppercase tracking-wider opacity-80 leading-tight">Мени Алып Кет</p>
+              <div className="min-w-0">
+                <h1 className="font-display text-2xl font-bold tracking-tight leading-none">
+                  {t("header.brand")}
+                </h1>
+                <p className="text-[11px] uppercase tracking-wider opacity-80 leading-tight">
+                  {t("header.brand.full")}
+                </p>
               </div>
             </div>
 
-            {stats && (
-              <div className="text-right text-sm">
-                <p className="font-medium text-white/90">Бүгүн</p>
-                <p className="opacity-80">{stats.acceptedRequests} сапар • {stats.totalSeats} орун</p>
-              </div>
-            )}
+            <div className="flex items-center gap-2 shrink-0">
+              {stats && (
+                <div className="text-right text-sm hidden xs:block">
+                  <p className="font-medium text-white/90">{t("header.today")}</p>
+                  <p className="opacity-80">
+                    {t("header.stats", {
+                      trips: stats.acceptedRequests,
+                      seats: stats.totalSeats,
+                    })}
+                  </p>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={toggle}
+                aria-label={t("lang.toggle.aria")}
+                className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 active:bg-white/30 transition-colors backdrop-blur-sm rounded-full px-3 py-1.5 text-xs font-bold tracking-wider"
+                data-testid="language-toggle"
+              >
+                <Languages className="w-3.5 h-3.5" />
+                <span>{lang === "kg" ? t("lang.kg") : t("lang.ru")}</span>
+              </button>
+            </div>
           </div>
 
+          {stats && (
+            <div className="text-sm text-white/90 mb-3 xs:hidden">
+              <span className="font-medium">{t("header.today")}: </span>
+              <span className="opacity-90">
+                {t("header.stats", {
+                  trips: stats.acceptedRequests,
+                  seats: stats.totalSeats,
+                })}
+              </span>
+            </div>
+          )}
+
           <div className="space-y-1 text-white/90">
-            <p className="font-medium text-lg">Кыргызстан боюнча сапарлар</p>
-            <p className="text-sm opacity-85">Каалаган багытты тандап, тез машина табыңыз</p>
+            <p className="font-medium text-lg">{t("header.title")}</p>
+            <p className="text-sm opacity-85">{t("header.subtitle")}</p>
           </div>
         </div>
       </header>
@@ -54,14 +89,14 @@ export function Home() {
               className="rounded-lg h-full font-semibold text-base data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
             >
               <UserRound className="w-4 h-4 mr-2" />
-              Мен жүргүнчүмүн
+              {t("tabs.passenger")}
             </TabsTrigger>
             <TabsTrigger
               value="driver"
               className="rounded-lg h-full font-semibold text-base data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
             >
               <CarFront className="w-4 h-4 mr-2" />
-              Мен айдоочумун
+              {t("tabs.driver")}
             </TabsTrigger>
           </TabsList>
 

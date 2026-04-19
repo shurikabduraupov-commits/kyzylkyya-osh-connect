@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,23 +17,31 @@ import { MapPin, Users, CheckCircle2, Phone, Search, Car, ArrowRight, Navigation
 import { useToast } from "@/hooks/use-toast";
 import { DEFAULT_DESTINATION, DEFAULT_ORIGIN, KYRGYZSTAN_SETTLEMENTS } from "@/lib/settlements";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
-
-const createRideSchema = z.object({
-  origin: z.string().min(2, "Кайсы жерден чыгарыңызды тандаңыз"),
-  destination: z.string().min(2, "Каякка барарыңызды тандаңыз"),
-  pickupAddress: z.string().min(3, "Так даректи жазыңыз"),
-  notes: z.string().max(500, "500 белгиден ашпасын").optional(),
-  seats: z.coerce.number().min(1).max(7),
-}).refine((value) => value.origin !== value.destination, {
-  message: "Чыгуу жана баруу пункттары башка болушу керек",
-  path: ["destination"],
-});
-
-type CreateRideValues = z.infer<typeof createRideSchema>;
+import { useTranslation } from "@/lib/i18n";
 
 export function PassengerMode() {
+  const { t, lang } = useTranslation();
   const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const createRideSchema = useMemo(
+    () =>
+      z
+        .object({
+          origin: z.string().min(2, t("passenger.error.origin")),
+          destination: z.string().min(2, t("passenger.error.destination")),
+          pickupAddress: z.string().min(3, t("passenger.error.address")),
+          notes: z.string().max(500, t("passenger.error.notes")).optional(),
+          seats: z.coerce.number().min(1).max(7),
+        })
+        .refine((value) => value.origin !== value.destination, {
+          message: t("passenger.error.same"),
+          path: ["destination"],
+        }),
+    [t],
+  );
+
+  type CreateRideValues = z.infer<typeof createRideSchema>;
 
   const form = useForm<CreateRideValues>({
     resolver: zodResolver(createRideSchema),
@@ -46,19 +54,25 @@ export function PassengerMode() {
     },
   });
 
+  useEffect(() => {
+    if (Object.keys(form.formState.errors).length > 0) {
+      void form.trigger();
+    }
+  }, [lang, form]);
+
   const createMutation = useCreateRideRequest({
     mutation: {
       onSuccess: (data) => {
         setActiveRequestId(data.id);
         toast({
-          title: "Заявка жөнөтүлдү",
-          description: "Азыр сизге машина издеп жатабыз.",
+          title: t("passenger.toast.created.title"),
+          description: t("passenger.toast.created.desc"),
         });
       },
       onError: () => {
         toast({
-          title: "Ката кетти",
-          description: "Заявканы түзүү мүмкүн болгон жок. Кайра аракет кылыңыз.",
+          title: t("passenger.toast.error.title"),
+          description: t("passenger.toast.error.desc"),
           variant: "destructive",
         });
       },
@@ -105,9 +119,9 @@ export function PassengerMode() {
               <CheckCircle2 className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h3 className="font-display font-bold text-2xl">Машина табылды</h3>
+              <h3 className="font-display font-bold text-2xl">{t("passenger.found.title")}</h3>
               <p className="text-primary-foreground/90 text-sm mt-1">
-                {activeRequest.route} сапарыңыз тастыкталды
+                {t("passenger.found.subtitle", { route: activeRequest.route })}
               </p>
             </div>
           </div>
@@ -119,7 +133,9 @@ export function PassengerMode() {
                   <Car className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Айдоочу</p>
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+                    {t("passenger.found.driver")}
+                  </p>
                   <p className="font-semibold text-foreground text-lg">{activeRequest.driverName}</p>
                 </div>
               </div>
@@ -132,7 +148,7 @@ export function PassengerMode() {
                 onClick={() => window.open(`tel:${activeRequest.driverPhone}`, "_blank")}
               >
                 <Phone className="w-5 h-5" />
-                Чалуу: {activeRequest.driverPhone}
+                {t("passenger.found.call", { phone: activeRequest.driverPhone ?? "" })}
               </Button>
 
               <Button
@@ -140,7 +156,7 @@ export function PassengerMode() {
                 className="w-full text-muted-foreground"
                 onClick={resetRequest}
               >
-                Башка сапар издөө
+                {t("passenger.found.search-other")}
               </Button>
             </div>
           </CardContent>
@@ -154,8 +170,8 @@ export function PassengerMode() {
   return (
     <Card className="w-full shadow-sm border-border">
       <CardHeader className="pb-4">
-        <CardTitle className="font-display text-2xl font-bold">Багытты тандаңыз</CardTitle>
-        <CardDescription>Кыргызстандын ичиндеги каалаган шаар же айыл боюнча машина табыңыз.</CardDescription>
+        <CardTitle className="font-display text-2xl font-bold">{t("passenger.title")}</CardTitle>
+        <CardDescription>{t("passenger.description")}</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -166,13 +182,13 @@ export function PassengerMode() {
                 name="origin"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-foreground">Кайсы жерден чыгасыз?</FormLabel>
+                    <FormLabel className="text-foreground">{t("passenger.origin.label")}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="h-12 text-base">
                           <div className="flex items-center gap-2 min-w-0">
                             <Navigation className="w-5 h-5 text-muted-foreground shrink-0" />
-                            <SelectValue placeholder="Чыгуу пунктун тандаңыз" />
+                            <SelectValue placeholder={t("passenger.origin.placeholder")} />
                           </div>
                         </SelectTrigger>
                       </FormControl>
@@ -194,13 +210,13 @@ export function PassengerMode() {
                 name="destination"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-foreground">Каякка барасыз?</FormLabel>
+                    <FormLabel className="text-foreground">{t("passenger.destination.label")}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="h-12 text-base">
                           <div className="flex items-center gap-2 min-w-0">
                             <MapPin className="w-5 h-5 text-muted-foreground shrink-0" />
-                            <SelectValue placeholder="Баруу пунктун тандаңыз" />
+                            <SelectValue placeholder={t("passenger.destination.placeholder")} />
                           </div>
                         </SelectTrigger>
                       </FormControl>
@@ -223,18 +239,16 @@ export function PassengerMode() {
               name="pickupAddress"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-foreground">Так кайсы жерден алып кетсин?</FormLabel>
+                  <FormLabel className="text-foreground">{t("passenger.address.label")}</FormLabel>
                   <FormControl>
                     <AddressAutocomplete
                       value={field.value}
                       onChange={field.onChange}
                       city={form.watch("origin")}
-                      placeholder="көчө, объект же конкреттүү жер"
+                      placeholder={t("passenger.address.placeholder")}
                     />
                   </FormControl>
-                  <p className="text-xs text-muted-foreground">
-                    OpenStreetMap маалымат базасынан көчө/объект тандаңыз
-                  </p>
+                  <p className="text-xs text-muted-foreground">{t("passenger.address.hint")}</p>
                   <FormMessage />
                 </FormItem>
               )}
@@ -245,10 +259,10 @@ export function PassengerMode() {
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-foreground">Кошумча эскертүү</FormLabel>
+                  <FormLabel className="text-foreground">{t("passenger.notes.label")}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="мисалы: үй номери, көрүнгөн белги, жүк бар"
+                      placeholder={t("passenger.notes.placeholder")}
                       className="min-h-[80px] text-base resize-none"
                       maxLength={500}
                       {...field}
@@ -264,7 +278,7 @@ export function PassengerMode() {
               name="seats"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-foreground">Канча орун керек?</FormLabel>
+                  <FormLabel className="text-foreground">{t("passenger.seats.label")}</FormLabel>
                   <Select
                     onValueChange={(val) => field.onChange(Number(val))}
                     value={field.value.toString()}
@@ -273,14 +287,14 @@ export function PassengerMode() {
                       <SelectTrigger className="h-12 text-base">
                         <div className="flex items-center gap-2">
                           <Users className="w-5 h-5 text-muted-foreground" />
-                          <SelectValue placeholder="Орун тандаңыз" />
+                          <SelectValue placeholder={t("passenger.seats.placeholder")} />
                         </div>
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {[1, 2, 3, 4, 5, 6, 7].map((num) => (
                         <SelectItem key={num} value={num.toString()}>
-                          {num} орун
+                          {t("passenger.seats.value", { n: num })}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -295,7 +309,7 @@ export function PassengerMode() {
               className="w-full h-14 text-lg font-semibold mt-4 shadow-sm hover-elevate-2 group"
               disabled={createMutation.isPending}
             >
-              {createMutation.isPending ? "Жөнөтүлүүдө..." : "Машина табуу"}
+              {createMutation.isPending ? t("passenger.submit.loading") : t("passenger.submit")}
               {!createMutation.isPending && (
                 <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               )}
@@ -308,6 +322,7 @@ export function PassengerMode() {
 }
 
 function WaitingCard({ route }: { route: string }) {
+  const { t } = useTranslation();
   return (
     <Card className="w-full shadow-md border-border bg-card overflow-hidden">
       <CardContent className="p-8 flex flex-col items-center justify-center min-h-[300px] text-center space-y-4">
@@ -318,10 +333,10 @@ function WaitingCard({ route }: { route: string }) {
           <div className="absolute top-0 left-0 w-16 h-16 rounded-full border-4 border-primary border-t-transparent animate-spin" />
         </div>
         <div className="space-y-2">
-          <h3 className="font-display font-semibold text-xl">Айдоочу изделүүдө</h3>
+          <h3 className="font-display font-semibold text-xl">{t("passenger.waiting.title")}</h3>
           <p className="text-foreground font-medium">{route}</p>
           <p className="text-muted-foreground text-sm max-w-[250px]">
-            Заявкаңыз ушул багыттагы айдоочуларга көрсөтүлүүдө. Адатта 2-5 мүнөт талап кылынат.
+            {t("passenger.waiting.desc")}
           </p>
         </div>
       </CardContent>

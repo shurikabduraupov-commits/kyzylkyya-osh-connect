@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, MapPin, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { searchNominatim, type NominatimSuggestion } from "@/lib/nominatim";
+import { useTranslation } from "@/lib/i18n";
 
 type Props = {
   value: string;
@@ -12,6 +13,7 @@ type Props = {
 };
 
 export function AddressAutocomplete({ value, onChange, city, placeholder, id }: Props) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<NominatimSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
@@ -48,7 +50,7 @@ export function AddressAutocomplete({ value, onChange, city, placeholder, id }: 
         setOpen(true);
       } catch (err) {
         if ((err as Error).name === "AbortError") return;
-        setError("Издөө учурунда ката кетти");
+        setError(t("address.error"));
         setOpen(true);
       } finally {
         setLoading(false);
@@ -111,7 +113,7 @@ export function AddressAutocomplete({ value, onChange, city, placeholder, id }: 
           {loading && suggestions.length === 0 && (
             <div className="px-4 py-3 text-sm text-muted-foreground flex items-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin" />
-              Изделүүдө...
+              {t("address.searching")}
             </div>
           )}
 
@@ -120,7 +122,7 @@ export function AddressAutocomplete({ value, onChange, city, placeholder, id }: 
           )}
 
           {!loading && !error && suggestions.length === 0 && value.trim().length >= 1 && (
-            <div className="px-4 py-3 text-sm text-muted-foreground">Эч нерсе табылган жок</div>
+            <div className="px-4 py-3 text-sm text-muted-foreground">{t("address.empty")}</div>
           )}
 
           {suggestions.map((suggestion) => (
