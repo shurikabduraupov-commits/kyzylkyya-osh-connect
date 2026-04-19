@@ -21,9 +21,18 @@ import { SettlementCombobox } from "@/components/settlement-combobox";
 import { useTranslation } from "@/lib/i18n";
 import { readProfile, updateProfile } from "@/lib/profile";
 
-function toLocalInput(date: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+const pad = (n: number) => String(n).padStart(2, "0");
+
+function toTimeInput(date: Date): string {
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function combineDateTime(day: "today" | "tomorrow", time: string): Date {
+  const [h, m] = time.split(":").map((v) => parseInt(v, 10));
+  const d = new Date();
+  if (day === "tomorrow") d.setDate(d.getDate() + 1);
+  d.setHours(h || 0, m || 0, 0, 0);
+  return d;
 }
 
 export function PassengerMode() {
@@ -40,6 +49,7 @@ export function PassengerMode() {
           pickupAddress: z.string().min(3, t("passenger.error.address")),
           notes: z.string().max(500, t("passenger.error.notes")).optional(),
           seats: z.coerce.number().min(1).max(7),
+          departDay: z.enum(["today", "tomorrow"]),
           departAfter: z.string().min(1, t("passenger.error.depart-required")),
           departBefore: z.string().min(1, t("passenger.error.depart-required")),
         })
@@ -49,9 +59,8 @@ export function PassengerMode() {
         })
         .refine(
           (value) => {
-            const a = Date.parse(value.departAfter);
-            const b = Date.parse(value.departBefore);
-            if (Number.isNaN(a) || Number.isNaN(b)) return false;
+            const a = combineDateTime(value.departDay, value.departAfter).getTime();
+            const b = combineDateTime(value.departDay, value.departBefore).getTime();
             return b > a;
           },
           {
@@ -64,16 +73,14 @@ export function PassengerMode() {
 
   type CreateRideValues = z.infer<typeof createRideSchema>;
 
-  const defaultDepartAfter = useMemo(() => {
-    const d = new Date(Date.now() + 30 * 60 * 1000);
-    d.setSeconds(0, 0);
-    return toLocalInput(d);
-  }, []);
-  const defaultDepartBefore = useMemo(() => {
-    const d = new Date(Date.now() + 2 * 60 * 60 * 1000);
-    d.setSeconds(0, 0);
-    return toLocalInput(d);
-  }, []);
+  const defaultDepartAfter = useMemo(
+    () => toTimeInput(new Date(Date.now() + 30 * 60 * 1000)),
+    [],
+  );
+  const defaultDepartBefore = useMemo(
+    () => toTimeInput(new Date(Date.now() + 2 * 60 * 60 * 1000)),
+    [],
+  );
 
   const initialProfile = useMemo(() => readProfile(), []);
   const form = useForm<CreateRideValues>({
@@ -84,6 +91,7 @@ export function PassengerMode() {
       pickupAddress: "",
       notes: "",
       seats: 1,
+      departDay: "today",
       departAfter: defaultDepartAfter,
       departBefore: defaultDepartBefore,
     },
@@ -129,11 +137,12 @@ export function PassengerMode() {
   );
 
   const onSubmit = (data: CreateRideValues) => {
+    const { departDay, departAfter, departBefore, ...rest } = data;
     const payload = {
-      ...data,
-      notes: data.notes?.trim() ? data.notes.trim() : undefined,
-      departAfter: new Date(data.departAfter).toISOString(),
-      departBefore: new Date(data.departBefore).toISOString(),
+      ...rest,
+      notes: rest.notes?.trim() ? rest.notes.trim() : undefined,
+      departAfter: combineDateTime(departDay, departAfter).toISOString(),
+      departBefore: combineDateTime(departDay, departBefore).toISOString(),
     };
     updateProfile({ lastOrigin: data.origin, lastDestination: data.destination });
     createMutation.mutate({ data: payload });
@@ -296,6 +305,28 @@ export function PassengerMode() {
 
             <div className="space-y-2">
               <p className="text-sm font-medium text-foreground">{t("passenger.depart.label")}</p>
+              <FormField
+                control={form.control}
+                name="departDay"
+                render={({ field }) => (
+                  <div className="grid grid-cols-2 gap-2 p-1 bg-muted/50 rounded-lg">
+                    {(["today", "tomorrow"] as const).map((day) => (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() => field.onChange(day)}
+                        className={`h-10 rounded-md text-sm font-medium transition-colors ${
+                          field.value === day
+                            ? "bg-background shadow-sm text-foreground"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {t(day === "today" ? "passenger.depart.today" : "passenger.depart.tomorrow")}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              />
               <div className="grid grid-cols-2 gap-3">
                 <FormField
                   control={form.control}
@@ -306,7 +337,7 @@ export function PassengerMode() {
                         {t("passenger.depart.from")}
                       </FormLabel>
                       <FormControl>
-                        <Input type="datetime-local" className="h-12 text-base" {...field} />
+                        <Input type="time" className="h-12 text-base" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -321,7 +352,7 @@ export function PassengerMode() {
                         {t("passenger.depart.to")}
                       </FormLabel>
                       <FormControl>
-                        <Input type="datetime-local" className="h-12 text-base" {...field} />
+                        <Input type="time" className="h-12 text-base" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
