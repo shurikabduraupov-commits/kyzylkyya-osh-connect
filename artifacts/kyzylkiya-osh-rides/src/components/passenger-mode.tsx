@@ -303,6 +303,25 @@ export function PassengerMode() {
               )}
             />
 
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-foreground">{t("passenger.notes.label")}</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder={t("passenger.notes.placeholder")}
+                      className="min-h-[80px] text-base resize-none"
+                      maxLength={500}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="space-y-2">
               <p className="text-sm font-medium text-foreground">{t("passenger.depart.label")}</p>
               <FormField
@@ -361,25 +380,6 @@ export function PassengerMode() {
               </div>
               <p className="text-xs text-muted-foreground">{t("passenger.depart.hint")}</p>
             </div>
-
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-foreground">{t("passenger.notes.label")}</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder={t("passenger.notes.placeholder")}
-                      className="min-h-[80px] text-base resize-none"
-                      maxLength={500}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <FormField
               control={form.control}
