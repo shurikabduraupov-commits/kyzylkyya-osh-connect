@@ -65,7 +65,7 @@ const translations: Record<Language, Dict> = {
     "passenger.error.same": "Чыгуу жана баруу пункттары башка болушу керек",
     "passenger.error.notes": "500 белгиден ашпасын",
 
-    "driver.live": "Түз эфир",
+    "driver.live": "On line",
     "driver.active.title": "Активдүү заявкалар",
     "driver.filter.title": "Багыт боюнча чыпкалоо",
     "driver.filter.from": "Кайдан",
@@ -202,7 +202,7 @@ const translations: Record<Language, Dict> = {
     "passenger.error.same": "Пункты отправления и назначения должны различаться",
     "passenger.error.notes": "Не более 500 символов",
 
-    "driver.live": "В прямом эфире",
+    "driver.live": "On line",
     "driver.active.title": "Активные заявки",
     "driver.filter.title": "Фильтр по маршруту",
     "driver.filter.from": "Откуда",

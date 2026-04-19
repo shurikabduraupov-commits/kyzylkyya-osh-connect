@@ -32,8 +32,16 @@ export function Home() {
                 <h1 className="font-display text-2xl font-bold tracking-tight leading-none">
                   {t("header.brand")}
                 </h1>
-                <p className="text-[11px] uppercase tracking-wider opacity-80 leading-tight">
-                  {t("header.brand.full")}
+                <p className="text-xs tracking-wide opacity-90 leading-tight">
+                  {t("header.brand.full")
+                    .split(" ")
+                    .map((word, i, arr) => (
+                      <span key={i}>
+                        <span className="font-extrabold text-sm">{word.charAt(0)}</span>
+                        <span className="font-medium">{word.slice(1)}</span>
+                        {i < arr.length - 1 && " "}
+                      </span>
+                    ))}
                 </p>
               </div>
             </div>
