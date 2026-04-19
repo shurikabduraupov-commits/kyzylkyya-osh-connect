@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MapPin, Users, CheckCircle2, Phone, Search, Car, ArrowRight, Navigation } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DEFAULT_DESTINATION, DEFAULT_ORIGIN, KYRGYZSTAN_SETTLEMENTS } from "@/lib/settlements";
+import { AddressAutocomplete } from "@/components/address-autocomplete";
 
 const createRideSchema = z.object({
   origin: z.string().min(2, "Кайсы жерден чыгарыңызды тандаңыз"),
@@ -217,15 +218,16 @@ export function PassengerMode() {
                 <FormItem>
                   <FormLabel className="text-foreground">Так кайсы жерден алып кетсин?</FormLabel>
                   <FormControl>
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                      <Input
-                        placeholder="мисалы: автобекет же көчө дареги"
-                        className="pl-10 h-12 text-base"
-                        {...field}
-                      />
-                    </div>
+                    <AddressAutocomplete
+                      value={field.value}
+                      onChange={field.onChange}
+                      city={form.watch("origin")}
+                      placeholder="көчө, объект же конкреттүү жер"
+                    />
                   </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    OpenStreetMap маалымат базасынан көчө/объект тандаңыз
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}
