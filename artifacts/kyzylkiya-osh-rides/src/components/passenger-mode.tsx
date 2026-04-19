@@ -26,6 +26,7 @@ import { ActiveDriversList } from "@/components/active-drivers-list";
 import { useTranslation } from "@/lib/i18n";
 import { readProfile, updateProfile } from "@/lib/profile";
 import { prefetchCityPlaces } from "@/lib/nominatim";
+import { alertSuccess, alertWarning, ensureNotificationPermission, primeAudio } from "@/lib/alerts";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -126,6 +127,8 @@ export function PassengerMode() {
     mutation: {
       onSuccess: (data) => {
         setActiveRequestId(data.id);
+        primeAudio();
+        void ensureNotificationPermission();
         toast({
           title: t("passenger.toast.created.title"),
           description: t("passenger.toast.created.desc"),
@@ -178,7 +181,18 @@ export function PassengerMode() {
 
   useEffect(() => {
     if (!activeRequest) return;
+    if (previousStatus === "active" && activeRequest.status === "accepted") {
+      const driverInfo = activeRequest.driverName
+        ? `${activeRequest.driverName}${activeRequest.carMake ? " · " + activeRequest.carMake : ""}${activeRequest.carPlate ? " · " + activeRequest.carPlate : ""}`
+        : t("passenger.found.subtitle", { route: activeRequest.route });
+      alertSuccess(t("passenger.found.title"), driverInfo);
+      toast({
+        title: t("passenger.found.title"),
+        description: driverInfo,
+      });
+    }
     if (previousStatus === "accepted" && activeRequest.status === "active") {
+      alertWarning(t("passenger.released.toast.title"), t("passenger.released.toast.desc"));
       toast({
         title: t("passenger.released.toast.title"),
         description: t("passenger.released.toast.desc"),
