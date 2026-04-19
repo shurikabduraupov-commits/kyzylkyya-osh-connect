@@ -31,7 +31,7 @@ const translations: Record<Language, Dict> = {
     "passenger.address.label": "Так кайсы жерден алып кетсин?",
     "passenger.address.placeholder": "көчө, объект же конкреттүү жер",
     "passenger.address.hint": "OpenStreetMap маалымат базасынан көчө/объект тандаңыз",
-    "passenger.notes.label": "Кошумча эскертүү",
+    "passenger.notes.label": "Кошумча эскертүү (милдеттүү)",
     "passenger.notes.placeholder": "мисалы: үй номери, көрүнгөн белги, жүк бар",
     "passenger.seats.label": "Канча орун керек?",
     "passenger.seats.placeholder": "Орун тандаңыз",
@@ -106,6 +106,7 @@ const translations: Record<Language, Dict> = {
     "passenger.error.address": "Так даректи жазыңыз",
     "passenger.error.same": "Чыгуу жана баруу пункттары башка болушу керек",
     "passenger.error.notes": "500 белгиден ашпасын",
+    "passenger.error.notes-required": "Кошумча эскертүү жазыңыз (мисалы: үй номери, белги)",
 
     "driver.live": "On line",
     "driver.active.title": "Активдүү заявкалар",
@@ -216,7 +217,7 @@ const translations: Record<Language, Dict> = {
     "passenger.address.label": "Откуда именно забрать?",
     "passenger.address.placeholder": "улица, объект или конкретное место",
     "passenger.address.hint": "Выберите улицу или объект из базы OpenStreetMap",
-    "passenger.notes.label": "Дополнительная заметка",
+    "passenger.notes.label": "Дополнительная заметка (обязательно)",
     "passenger.notes.placeholder": "например: номер дома, ориентир, есть багаж",
     "passenger.seats.label": "Сколько мест нужно?",
     "passenger.seats.placeholder": "Выберите количество мест",
@@ -291,6 +292,7 @@ const translations: Record<Language, Dict> = {
     "passenger.error.address": "Напишите точный адрес",
     "passenger.error.same": "Пункты отправления и назначения должны различаться",
     "passenger.error.notes": "Не более 500 символов",
+    "passenger.error.notes-required": "Напишите заметку (например: номер дома, ориентир)",
 
     "driver.live": "On line",
     "driver.active.title": "Активные заявки",

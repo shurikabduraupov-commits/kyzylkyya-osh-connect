@@ -57,7 +57,7 @@ export function PassengerMode() {
           origin: z.string().min(2, t("passenger.error.origin")),
           destination: z.string().min(2, t("passenger.error.destination")),
           pickupAddress: z.string().min(3, t("passenger.error.address")),
-          notes: z.string().max(500, t("passenger.error.notes")).optional(),
+          notes: z.string().min(3, t("passenger.error.notes-required")).max(500, t("passenger.error.notes")),
           seats: z.coerce.number().min(1).max(7),
           departDay: z.enum(["today", "tomorrow"]),
           departAfter: z.string().min(1, t("passenger.error.depart-required")),
@@ -217,7 +217,7 @@ export function PassengerMode() {
     const { departDay, departAfter, departBefore, ...rest } = data;
     const payload = {
       ...rest,
-      notes: rest.notes?.trim() ? rest.notes.trim() : undefined,
+      notes: rest.notes.trim(),
       departAfter: combineDateTime(departDay, departAfter).toISOString(),
       departBefore: combineDateTime(departDay, departBefore).toISOString(),
     };
