@@ -14,3 +14,87 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * @summary List active passenger requests
+ */
+export const ListRideRequestsResponseItem = zod.object({
+  id: zod.string(),
+  pickupAddress: zod.string(),
+  seats: zod.number(),
+  route: zod.string(),
+  status: zod.enum(["active", "accepted"]),
+  driverName: zod.string().nullable(),
+  driverPhone: zod.string().nullable(),
+  createdAt: zod.coerce.date(),
+  acceptedAt: zod.coerce.date().nullable(),
+});
+export const ListRideRequestsResponse = zod.array(ListRideRequestsResponseItem);
+
+/**
+ * @summary Create a passenger ride request
+ */
+export const createRideRequestBodyPickupAddressMin = 3;
+
+export const createRideRequestBodySeatsMax = 7;
+
+export const CreateRideRequestBody = zod.object({
+  pickupAddress: zod.string().min(createRideRequestBodyPickupAddressMin),
+  seats: zod.number().min(1).max(createRideRequestBodySeatsMax),
+});
+
+/**
+ * @summary Get one ride request
+ */
+export const GetRideRequestParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const GetRideRequestResponse = zod.object({
+  id: zod.string(),
+  pickupAddress: zod.string(),
+  seats: zod.number(),
+  route: zod.string(),
+  status: zod.enum(["active", "accepted"]),
+  driverName: zod.string().nullable(),
+  driverPhone: zod.string().nullable(),
+  createdAt: zod.coerce.date(),
+  acceptedAt: zod.coerce.date().nullable(),
+});
+
+/**
+ * @summary Driver accepts a passenger request
+ */
+export const AcceptRideRequestParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const acceptRideRequestBodyDriverNameMin = 2;
+
+export const acceptRideRequestBodyDriverPhoneMin = 5;
+
+export const AcceptRideRequestBody = zod.object({
+  driverName: zod.string().min(acceptRideRequestBodyDriverNameMin),
+  driverPhone: zod.string().min(acceptRideRequestBodyDriverPhoneMin),
+});
+
+export const AcceptRideRequestResponse = zod.object({
+  id: zod.string(),
+  pickupAddress: zod.string(),
+  seats: zod.number(),
+  route: zod.string(),
+  status: zod.enum(["active", "accepted"]),
+  driverName: zod.string().nullable(),
+  driverPhone: zod.string().nullable(),
+  createdAt: zod.coerce.date(),
+  acceptedAt: zod.coerce.date().nullable(),
+});
+
+/**
+ * @summary Small dashboard summary
+ */
+export const GetRideStatsResponse = zod.object({
+  activeRequests: zod.number(),
+  acceptedRequests: zod.number(),
+  totalSeats: zod.number(),
+});

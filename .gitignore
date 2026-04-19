@@ -11,6 +11,18 @@ out-tsc
 # dependencies
 node_modules
 
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
 # IDEs and editors
 /.idea
 .project

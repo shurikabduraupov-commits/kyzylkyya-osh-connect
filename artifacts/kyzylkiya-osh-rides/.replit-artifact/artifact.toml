@@ -1,0 +1,45 @@
+kind = "web"
+previewPath = "/"
+title = "Кызыл-Кия — Ош"
+version = "1.0.0"
+id = "artifacts/kyzylkiya-osh-rides"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "rides-api"
+paths = [ "/rides-api" ]
+localPort = 24615
+
+[services.development]
+run = "python3 server.py"
+
+[services.production.run]
+args = [ "python3", "server.py" ]
+
+[services.env]
+PORT = "24615"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24614
+
+[services.development]
+run = "pnpm --filter @workspace/kyzylkiya-osh-rides run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/kyzylkiya-osh-rides", "run", "build" ]
+publicDir = "artifacts/kyzylkiya-osh-rides/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24614"
+BASE_PATH = "/"

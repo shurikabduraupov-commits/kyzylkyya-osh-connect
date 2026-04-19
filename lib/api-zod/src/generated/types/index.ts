@@ -6,4 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./acceptRideRequest";
+export * from "./createRideRequest";
 export * from "./healthStatus";
+export * from "./rideRequest";
+export * from "./rideStats";
+export * from "./rideStatus";

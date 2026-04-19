@@ -10,11 +10,18 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Node.js version**: 24
 - **Package manager**: pnpm
 - **TypeScript version**: 5.9
-- **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
+- **API framework**: Express 5 plus Python HTTP server for the rides app
+- **Database**: PostgreSQL + Drizzle ORM available; rides app currently uses in-memory Python storage
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
+- **Build**: esbuild (CJS bundle), Vite for web artifacts
+
+## Current Artifacts
+
+- **Кызыл-Кия — Ош** (`artifacts/kyzylkiya-osh-rides`): mobile-first ride request web app for passengers and drivers on the Kyzyl-Kiya to Osh route.
+  - Frontend: React + Vite at `/`
+  - Backend: Python standard-library HTTP server at `/rides-api`
+  - Main flow: passenger creates a pickup request, driver accepts it with name and phone, passenger sees driver contact details.
 
 ## Key Commands
 

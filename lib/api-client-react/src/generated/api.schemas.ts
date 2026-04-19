@@ -8,3 +8,45 @@
 export interface HealthStatus {
   status: string;
 }
+
+export type RideStatus = (typeof RideStatus)[keyof typeof RideStatus];
+
+export const RideStatus = {
+  active: "active",
+  accepted: "accepted",
+} as const;
+
+export interface CreateRideRequest {
+  /** @minLength 3 */
+  pickupAddress: string;
+  /**
+   * @minimum 1
+   * @maximum 7
+   */
+  seats: number;
+}
+
+export interface AcceptRideRequest {
+  /** @minLength 2 */
+  driverName: string;
+  /** @minLength 5 */
+  driverPhone: string;
+}
+
+export interface RideRequest {
+  id: string;
+  pickupAddress: string;
+  seats: number;
+  route: string;
+  status: RideStatus;
+  driverName: string | null;
+  driverPhone: string | null;
+  createdAt: string;
+  acceptedAt: string | null;
+}
+
+export interface RideStats {
+  activeRequests: number;
+  acceptedRequests: number;
+  totalSeats: number;
+}

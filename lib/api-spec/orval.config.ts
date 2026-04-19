@@ -26,7 +26,7 @@ export default defineConfig({
       target: "generated",
       client: "react-query",
       mode: "split",
-      baseUrl: "/api",
+      baseUrl: "/rides-api",
       clean: true,
       prettier: true,
       override: {

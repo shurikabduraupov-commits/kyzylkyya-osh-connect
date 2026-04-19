@@ -5,11 +5,13 @@ info:
   version: 0.1.0
   description: API specification
 servers:
-  - url: /api
-    description: Base API path
+  - url: /rides-api
+    description: Rides API path
 tags:
   - name: health
     description: Health operations
+  - name: rides
+    description: Ride request operations
 paths:
   /healthz:
     get:
@@ -24,6 +26,97 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /requests:
+    get:
+      operationId: listRideRequests
+      tags: [rides]
+      summary: List active passenger requests
+      responses:
+        "200":
+          description: Active requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RideRequest"
+    post:
+      operationId: createRideRequest
+      tags: [rides]
+      summary: Create a passenger ride request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRideRequest"
+      responses:
+        "201":
+          description: Created request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RideRequest"
+  /requests/{id}:
+    get:
+      operationId: getRideRequest
+      tags: [rides]
+      summary: Get one ride request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Ride request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RideRequest"
+        "404":
+          description: Request not found
+  /requests/{id}/accept:
+    post:
+      operationId: acceptRideRequest
+      tags: [rides]
+      summary: Driver accepts a passenger request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AcceptRideRequest"
+      responses:
+        "200":
+          description: Accepted request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RideRequest"
+        "404":
+          description: Request not found
+        "409":
+          description: Request already accepted
+  /stats:
+    get:
+      operationId: getRideStats
+      tags: [rides]
+      summary: Small dashboard summary
+      responses:
+        "200":
+          description: Ride statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RideStats"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +126,80 @@ components:
           type: string
       required:
         - status
-
+    RideStatus:
+      type: string
+      enum: [active, accepted]
+    CreateRideRequest:
+      type: object
+      properties:
+        pickupAddress:
+          type: string
+          minLength: 3
+        seats:
+          type: integer
+          minimum: 1
+          maximum: 7
+      required:
+        - pickupAddress
+        - seats
+    AcceptRideRequest:
+      type: object
+      properties:
+        driverName:
+          type: string
+          minLength: 2
+        driverPhone:
+          type: string
+          minLength: 5
+      required:
+        - driverName
+        - driverPhone
+    RideRequest:
+      type: object
+      properties:
+        id:
+          type: string
+        pickupAddress:
+          type: string
+        seats:
+          type: integer
+        route:
+          type: string
+        status:
+          $ref: "#/components/schemas/RideStatus"
+        driverName:
+          type: string
+          nullable: true
+        driverPhone:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        acceptedAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - id
+        - pickupAddress
+        - seats
+        - route
+        - status
+        - driverName
+        - driverPhone
+        - createdAt
+        - acceptedAt
+    RideStats:
+      type: object
+      properties:
+        activeRequests:
+          type: integer
+        acceptedRequests:
+          type: integer
+        totalSeats:
+          type: integer
+      required:
+        - activeRequests
+        - acceptedRequests
+        - totalSeats
