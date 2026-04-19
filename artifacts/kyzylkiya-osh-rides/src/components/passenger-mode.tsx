@@ -21,6 +21,7 @@ import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { SettlementCombobox } from "@/components/settlement-combobox";
 import { useTranslation } from "@/lib/i18n";
 import { readProfile, updateProfile } from "@/lib/profile";
+import { prefetchCityPlaces } from "@/lib/nominatim";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -104,6 +105,16 @@ export function PassengerMode() {
       void form.trigger();
     }
   }, [lang, form]);
+
+  useEffect(() => {
+    prefetchCityPlaces(form.getValues("origin"));
+    const sub = form.watch((value, info) => {
+      if (info.name === "origin" && value.origin) {
+        prefetchCityPlaces(value.origin);
+      }
+    });
+    return () => sub.unsubscribe();
+  }, [form]);
 
   const createMutation = useCreateRideRequest({
     mutation: {

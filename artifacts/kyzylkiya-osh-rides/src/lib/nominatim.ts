@@ -185,6 +185,36 @@ type OverpassResponse = { elements: OverpassElement[] };
 
 const cityCache = new Map<string, Promise<NominatimSuggestion[]>>();
 
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const cacheKey = (city: string) => `mak.places.v1.${city}`;
+
+function readDiskCache(city: string): NominatimSuggestion[] | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(cacheKey(city));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { ts: number; places: NominatimSuggestion[] };
+    if (!parsed?.ts || !Array.isArray(parsed.places)) return null;
+    if (Date.now() - parsed.ts > CACHE_TTL_MS) return null;
+    return parsed.places;
+  } catch {
+    return null;
+  }
+}
+
+function writeDiskCache(city: string, places: NominatimSuggestion[]): void {
+  if (typeof window === "undefined") return;
+  if (!places.length) return;
+  try {
+    window.localStorage.setItem(
+      cacheKey(city),
+      JSON.stringify({ ts: Date.now(), places }),
+    );
+  } catch {
+    // quota exceeded — ignore
+  }
+}
+
 async function fetchCityPlaces(city: string): Promise<NominatimSuggestion[]> {
   const coords = CITY_COORDS[city];
   if (!coords) return [];
@@ -303,10 +333,25 @@ async function fetchCityPlaces(city: string): Promise<NominatimSuggestion[]> {
 
 function getCityPlaces(city: string): Promise<NominatimSuggestion[]> {
   if (!cityCache.has(city)) {
-    const promise = fetchCityPlaces(city).catch(() => [] as NominatimSuggestion[]);
-    cityCache.set(city, promise);
+    const cached = readDiskCache(city);
+    if (cached) {
+      cityCache.set(city, Promise.resolve(cached));
+    } else {
+      const promise = fetchCityPlaces(city)
+        .then((places) => {
+          writeDiskCache(city, places);
+          return places;
+        })
+        .catch(() => [] as NominatimSuggestion[]);
+      cityCache.set(city, promise);
+    }
   }
   return cityCache.get(city)!;
+}
+
+export function prefetchCityPlaces(city: string): void {
+  if (!city) return;
+  void getCityPlaces(city);
 }
 
 function buildHaystacks(text: string): string[] {
