@@ -183,8 +183,22 @@ export async function searchNominatim({
 
   const data = (await response.json()) as PhotonResponse;
 
+  const normalizedCity = toCyrillic(city).trim().toLowerCase();
+
   return data.features
     .filter((feature) => (feature.properties.countrycode ?? "").toUpperCase() === "KG")
+    .filter((feature) => {
+      if (!normalizedCity) return true;
+      const candidates = [
+        feature.properties.city,
+        feature.properties.locality,
+        feature.properties.district,
+        feature.properties.county,
+      ]
+        .filter((value): value is string => Boolean(value))
+        .map((value) => toCyrillic(value).trim().toLowerCase());
+      return candidates.some((value) => value === normalizedCity);
+    })
     .map((feature) => {
       const props = feature.properties;
       const fallbackName = props.name ?? props.street ?? "";
