@@ -8,38 +8,6 @@ export type NominatimSuggestion = {
   lon: string;
 };
 
-type PhotonProperties = {
-  osm_id: number;
-  osm_type: string;
-  osm_key: string;
-  osm_value: string;
-  type?: string;
-  name?: string;
-  street?: string;
-  housenumber?: string;
-  city?: string;
-  district?: string;
-  locality?: string;
-  county?: string;
-  state?: string;
-  country?: string;
-  countrycode?: string;
-  postcode?: string;
-};
-
-type PhotonFeature = {
-  type: "Feature";
-  geometry: { type: "Point"; coordinates: [number, number] };
-  properties: PhotonProperties;
-};
-
-type PhotonResponse = {
-  type: "FeatureCollection";
-  features: PhotonFeature[];
-};
-
-const KG_BBOX = "69.2,39.1,80.3,43.3";
-
 const DIGRAPH_MAP: Array<[RegExp, string]> = [
   [/shch/gi, "щ"],
   [/sch/gi, "щ"],
@@ -66,7 +34,11 @@ const CHAR_MAP: Record<string, string> = {
 function transliterateToken(token: string): string {
   let out = token;
   for (const [pattern, replacement] of DIGRAPH_MAP) {
-    out = out.replace(pattern, (match) => (match[0] === match[0].toUpperCase() ? replacement.toUpperCase() : replacement));
+    out = out.replace(pattern, (match) =>
+      match[0] === match[0].toUpperCase()
+        ? replacement[0].toUpperCase() + replacement.slice(1)
+        : replacement,
+    );
   }
   let result = "";
   for (const ch of out) {
@@ -83,7 +55,7 @@ function transliterateToken(token: string): string {
 
 function isLatinToken(token: string): boolean {
   if (!/[A-Za-zÇĞÑÖŞÜçğñöşüıʻ']/.test(token)) return false;
-  if (/[А-Яа-яЁёӨөҮүҢңЇї]/.test(token)) return false;
+  if (/[А-Яа-яЁёӨөҮүҢң]/.test(token)) return false;
   return true;
 }
 
@@ -117,7 +89,11 @@ function toLatin(text: string): string {
   if (!text) return text;
   let out = text;
   for (const [pattern, replacement] of CYR_TO_LAT_DIGRAPH) {
-    out = out.replace(pattern, (match) => (match[0] === match[0].toUpperCase() ? replacement[0].toUpperCase() + replacement.slice(1) : replacement));
+    out = out.replace(pattern, (match) =>
+      match[0] === match[0].toUpperCase()
+        ? replacement[0].toUpperCase() + replacement.slice(1)
+        : replacement,
+    );
   }
   let result = "";
   for (const ch of out) {
@@ -132,66 +108,178 @@ function toLatin(text: string): string {
   return result;
 }
 
-function normalizeCity(value: string): string {
-  return toCyrillic(value)
-    .toLowerCase()
-    .replace(/ё/g, "е")
-    .replace(/[^а-яёөүңa-z]/gi, "");
-}
-
 const CITY_COORDS: Record<string, [number, number]> = {
-  "Кызыл-Кыя": [72.1294, 40.2569],
-  "Ош": [72.7985, 40.5283],
   "Бишкек": [74.5698, 42.8746],
+  "Ош": [72.7985, 40.5283],
   "Жалал-Абад": [72.9873, 40.9333],
   "Каракол": [78.3933, 42.4906],
-  "Талас": [72.2425, 42.5228],
   "Нарын": [75.9911, 41.4287],
+  "Талас": [72.2425, 42.5228],
   "Баткен": [70.8197, 40.0613],
-  "Узген": [73.3008, 40.7692],
+  "Кызыл-Кыя": [72.1294, 40.2569],
+  "Кара-Балта": [73.8500, 42.8167],
+  "Токмок": [75.2989, 42.8417],
+  "Балыкчы": [76.1856, 42.4606],
+  "Кант": [74.8500, 42.8917],
   "Кара-Суу": [72.8675, 40.7042],
+  "Өзгөн": [73.3008, 40.7692],
+  "Ноокат": [72.6164, 40.2675],
+  "Араван": [72.5083, 40.5083],
+  "Кадамжай": [71.7333, 40.1167],
+  "Айдаркен": [71.4458, 39.9367],
+  "Раззаков": [69.5650, 39.9333],
+  "Сүлүктү": [69.5667, 39.9333],
+  "Базар-Коргон": [72.7464, 41.0392],
+  "Кочкор-Ата": [72.5025, 41.0436],
+  "Майлуу-Суу": [72.4731, 41.2967],
+  "Таш-Көмүр": [72.2200, 41.3450],
+  "Кербен": [71.7833, 41.5167],
+  "Ала-Бука": [71.4292, 41.4042],
+  "Токтогул": [72.9417, 41.8750],
+  "Казарман": [74.0500, 41.4000],
+  "Сузак": [73.0500, 40.8500],
+  "Ноокен": [72.6000, 41.1833],
+  "Кочкор": [75.7833, 42.2167],
+  "Ат-Башы": [75.8083, 41.1700],
+  "Чолпон-Ата": [77.0833, 42.6500],
+  "Бөкөнбаев": [77.1833, 42.1500],
+  "Кызыл-Суу": [78.0000, 42.3500],
+  "Түп": [78.3667, 42.7333],
+  "Ананьево": [77.6500, 42.7333],
+  "Бостери": [77.2167, 42.6333],
+  "Кемин": [75.7000, 42.7833],
+  "Шопоков": [74.3667, 42.8333],
+  "Сокулук": [74.3000, 42.8667],
+  "Беловодское": [74.1167, 42.8167],
+  "Каинды": [73.7000, 42.8333],
+  "Манас": [72.4833, 42.5167],
+  "Покровка": [78.4500, 42.6500],
+  "Ленинполь": [71.7500, 42.4833],
+  "Дароот-Коргон": [72.2167, 39.5500],
+  "Гүлчө": [73.4500, 40.3167],
+  "Сары-Таш": [73.2667, 39.7333],
+  "Кара-Кулжа": [73.5000, 40.5667],
+  "Каныш-Кыя": [71.0833, 41.6667],
+  "Кара-Көл": [72.6833, 41.6167],
+  "Көк-Жаңгак": [73.2000, 41.0333],
+  "Шамалды-Сай": [72.2333, 41.1667],
+  "Массы": [72.5667, 41.1500],
+  "Кызыл-Адыр": [71.5667, 42.6167],
+  "Ивановка": [74.9333, 42.8833],
+  "Лебединовка": [74.6833, 42.8833],
+  "Маевка": [74.5333, 42.8500],
+  "Новопавловка": [74.5333, 42.8500],
 };
 
-function buildShortLabel(props: PhotonProperties, fallbackName: string): string {
-  const parts: string[] = [];
-  const street = toCyrillic(props.street ?? "");
-  const houseNumber = props.housenumber;
-  const placeName = toCyrillic(props.name ?? "");
-  const settlement = toCyrillic(
-    props.city || props.locality || props.district || props.county || "",
-  );
+type OverpassElement = {
+  type: string;
+  id: number;
+  lat?: number;
+  lon?: number;
+  center?: { lat: number; lon: number };
+  tags?: Record<string, string>;
+};
 
-  if (street) {
-    parts.push(houseNumber ? `${street}, ${houseNumber}` : street);
-    if (placeName && placeName !== street) {
-      parts.unshift(placeName);
+type OverpassResponse = { elements: OverpassElement[] };
+
+const cityCache = new Map<string, Promise<NominatimSuggestion[]>>();
+
+async function fetchCityPlaces(city: string): Promise<NominatimSuggestion[]> {
+  const coords = CITY_COORDS[city];
+  if (!coords) return [];
+  const [lon, lat] = coords;
+
+  const query = `
+    [out:json][timeout:20];
+    (
+      way["highway"]["name"](around:7000,${lat},${lon});
+      node["amenity"]["name"](around:7000,${lat},${lon});
+      way["amenity"]["name"](around:7000,${lat},${lon});
+      node["shop"]["name"](around:7000,${lat},${lon});
+      node["tourism"]["name"](around:7000,${lat},${lon});
+    );
+    out tags center 800;
+  `;
+
+  const endpoints = [
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.osm.ch/api/interpreter",
+  ];
+
+  let data: OverpassResponse | null = null;
+  for (const url of endpoints) {
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        body: "data=" + encodeURIComponent(query),
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      });
+      if (!response.ok) continue;
+      data = (await response.json()) as OverpassResponse;
+      break;
+    } catch {
+      // try next mirror
     }
-  } else if (placeName) {
-    parts.push(placeName);
-  } else {
-    parts.push(toCyrillic(fallbackName));
   }
 
-  if (settlement && !parts.some((p) => p.includes(settlement))) {
-    parts.push(settlement);
+  if (!data) return [];
+
+  const seen = new Set<string>();
+  const places: NominatimSuggestion[] = [];
+
+  for (const el of data.elements ?? []) {
+    const tags = el.tags ?? {};
+    const rawName = tags.name;
+    if (!rawName) continue;
+
+    const cyrName = toCyrillic(rawName);
+    const isStreet = !!tags.highway;
+    const amenity = tags.amenity || tags.shop || tags.tourism;
+    const key = `${cyrName.toLowerCase()}|${isStreet ? "s" : amenity || "x"}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const lat = String(el.lat ?? el.center?.lat ?? coords[1]);
+    const lon = String(el.lon ?? el.center?.lon ?? coords[0]);
+
+    const shortLabel = `${cyrName}, ${city}`;
+    const displayName = isStreet
+      ? `${cyrName}, ${city} (көчө)`
+      : `${cyrName}${amenity ? ` — ${amenity}` : ""}, ${city}`;
+
+    places.push({
+      placeId: `${el.type}:${el.id}`,
+      displayName,
+      shortLabel,
+      category: isStreet ? "highway" : "amenity",
+      type: tags.highway || amenity || "",
+      lat,
+      lon,
+    });
   }
 
-  return parts.join(", ");
+  places.sort((a, b) => {
+    if (a.category !== b.category) return a.category === "highway" ? -1 : 1;
+    return a.shortLabel.localeCompare(b.shortLabel, "ru");
+  });
+
+  return places;
 }
 
-function buildDisplayName(props: PhotonProperties): string {
-  const segments = [
-    props.name,
-    props.street,
-    props.city || props.locality,
-    props.district,
-    props.county,
-    props.state,
-    props.country,
-  ]
-    .filter((value, index, all) => value && all.indexOf(value) === index)
-    .map((value) => toCyrillic(value as string));
-  return segments.join(", ");
+function getCityPlaces(city: string): Promise<NominatimSuggestion[]> {
+  if (!cityCache.has(city)) {
+    const promise = fetchCityPlaces(city).catch(() => [] as NominatimSuggestion[]);
+    cityCache.set(city, promise);
+  }
+  return cityCache.get(city)!;
+}
+
+function buildHaystacks(text: string): string[] {
+  const cyr = toCyrillic(text).toLowerCase();
+  const lat = toLatin(text).toLowerCase();
+  return cyr === lat ? [cyr] : [cyr, lat];
 }
 
 export async function searchNominatim({
@@ -206,85 +294,26 @@ export async function searchNominatim({
   const trimmed = query.trim();
   if (trimmed.length < 1) return [];
 
-  const proximity = CITY_COORDS[city];
+  const places = await getCityPlaces(city);
+  if (signal?.aborted) return [];
 
-  const buildUrl = (q: string) => {
-    const params = new URLSearchParams({
-      q,
-      limit: "20",
-      bbox: KG_BBOX,
-    });
-    if (proximity) {
-      params.set("lon", String(proximity[0]));
-      params.set("lat", String(proximity[1]));
-    }
-    return `https://photon.komoot.io/api/?${params.toString()}`;
-  };
+  const needles = buildHaystacks(trimmed);
 
-  const queries = new Set<string>();
-  queries.add(trimmed);
-  const latinQuery = toLatin(trimmed);
-  if (latinQuery && latinQuery !== trimmed) queries.add(latinQuery);
-  const cyrQuery = toCyrillic(trimmed);
-  if (cyrQuery && cyrQuery !== trimmed) queries.add(cyrQuery);
-
-  const responses = await Promise.all(
-    Array.from(queries).map(async (q) => {
-      try {
-        const r = await fetch(buildUrl(q), { signal, headers: { Accept: "application/json" } });
-        if (!r.ok) return [] as PhotonFeature[];
-        const json = (await r.json()) as PhotonResponse;
-        return json.features ?? [];
-      } catch (err) {
-        if ((err as Error).name === "AbortError") throw err;
-        return [] as PhotonFeature[];
-      }
-    }),
-  );
-
-  const allFeatures = responses.flat();
-  const seenIds = new Set<string>();
-  const uniqueFeatures = allFeatures.filter((feature) => {
-    const key = `${feature.properties.osm_type}:${feature.properties.osm_id}`;
-    if (seenIds.has(key)) return false;
-    seenIds.add(key);
-    return true;
+  const matches = places.filter((place) => {
+    const haystacks = buildHaystacks(place.shortLabel);
+    return needles.some((needle) => haystacks.some((hay) => hay.includes(needle)));
   });
 
-  const normalizedCity = normalizeCity(city);
+  matches.sort((a, b) => {
+    const aStarts = buildHaystacks(a.shortLabel).some((h) =>
+      needles.some((n) => h.startsWith(n)),
+    );
+    const bStarts = buildHaystacks(b.shortLabel).some((h) =>
+      needles.some((n) => h.startsWith(n)),
+    );
+    if (aStarts !== bStarts) return aStarts ? -1 : 1;
+    return 0;
+  });
 
-  return uniqueFeatures
-    .filter((feature) => (feature.properties.countrycode ?? "").toUpperCase() === "KG")
-    .filter((feature) => {
-      if (!normalizedCity) return true;
-      const candidates = [
-        feature.properties.city,
-        feature.properties.locality,
-        feature.properties.district,
-        feature.properties.county,
-      ]
-        .filter((value): value is string => Boolean(value))
-        .map((value) => normalizeCity(value));
-      return candidates.some(
-        (value) =>
-          value === normalizedCity ||
-          value.includes(normalizedCity) ||
-          normalizedCity.includes(value),
-      );
-    })
-    .slice(0, 12)
-    .map((feature) => {
-      const props = feature.properties;
-      const fallbackName = props.name ?? props.street ?? "";
-      return {
-        placeId: `${props.osm_type}:${props.osm_id}:${props.osm_key}:${props.osm_value}`,
-        displayName: buildDisplayName(props),
-        shortLabel: buildShortLabel(props, fallbackName),
-        category: props.osm_key,
-        type: props.osm_value,
-        lat: String(feature.geometry.coordinates[1]),
-        lon: String(feature.geometry.coordinates[0]),
-      };
-    })
-    .filter((item) => item.shortLabel.trim().length > 0);
+  return matches.slice(0, 15);
 }
