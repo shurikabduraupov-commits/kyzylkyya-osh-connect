@@ -40,6 +40,61 @@ type PhotonResponse = {
 
 const KG_BBOX = "69.2,39.1,80.3,43.3";
 
+const DIGRAPH_MAP: Array<[RegExp, string]> = [
+  [/shch/gi, "щ"],
+  [/sch/gi, "щ"],
+  [/sh/gi, "ш"],
+  [/ch/gi, "ч"],
+  [/zh/gi, "ж"],
+  [/kh/gi, "х"],
+  [/gh/gi, "г"],
+  [/ts/gi, "ц"],
+  [/ya/gi, "я"],
+  [/yu/gi, "ю"],
+  [/yo/gi, "ё"],
+  [/ye/gi, "е"],
+];
+
+const CHAR_MAP: Record<string, string> = {
+  a: "а", b: "б", c: "ц", d: "д", e: "е", f: "ф", g: "г", h: "х", i: "и",
+  j: "ж", k: "к", l: "л", m: "м", n: "н", o: "о", p: "п", q: "к", r: "р",
+  s: "с", t: "т", u: "у", v: "в", w: "в", x: "кс", y: "й", z: "з",
+  ç: "ч", ğ: "г", ñ: "ң", ö: "ө", ş: "ш", ü: "ү", ı: "ы", ʻ: "", "'": "",
+  "`": "",
+};
+
+function transliterateToken(token: string): string {
+  let out = token;
+  for (const [pattern, replacement] of DIGRAPH_MAP) {
+    out = out.replace(pattern, (match) => (match[0] === match[0].toUpperCase() ? replacement.toUpperCase() : replacement));
+  }
+  let result = "";
+  for (const ch of out) {
+    const lower = ch.toLowerCase();
+    const mapped = CHAR_MAP[lower];
+    if (mapped !== undefined) {
+      result += ch === lower ? mapped : mapped.toUpperCase();
+    } else {
+      result += ch;
+    }
+  }
+  return result;
+}
+
+function isLatinToken(token: string): boolean {
+  if (!/[A-Za-zÇĞÑÖŞÜçğñöşüıʻ']/.test(token)) return false;
+  if (/[А-Яа-яЁёӨөҮүҢңЇї]/.test(token)) return false;
+  return true;
+}
+
+function toCyrillic(text: string): string {
+  if (!text) return text;
+  return text
+    .split(/(\s+|[,;:.()/\-])/)
+    .map((segment) => (isLatinToken(segment) ? transliterateToken(segment) : segment))
+    .join("");
+}
+
 const CITY_COORDS: Record<string, [number, number]> = {
   "Кызыл-Кыя": [72.1294, 40.2569],
   "Ош": [72.7985, 40.5283],
@@ -55,10 +110,12 @@ const CITY_COORDS: Record<string, [number, number]> = {
 
 function buildShortLabel(props: PhotonProperties, fallbackName: string): string {
   const parts: string[] = [];
-  const street = props.street;
+  const street = toCyrillic(props.street ?? "");
   const houseNumber = props.housenumber;
-  const placeName = props.name;
-  const settlement = props.city || props.locality || props.district || props.county || "";
+  const placeName = toCyrillic(props.name ?? "");
+  const settlement = toCyrillic(
+    props.city || props.locality || props.district || props.county || "",
+  );
 
   if (street) {
     parts.push(houseNumber ? `${street}, ${houseNumber}` : street);
@@ -68,7 +125,7 @@ function buildShortLabel(props: PhotonProperties, fallbackName: string): string 
   } else if (placeName) {
     parts.push(placeName);
   } else {
-    parts.push(fallbackName);
+    parts.push(toCyrillic(fallbackName));
   }
 
   if (settlement && !parts.some((p) => p.includes(settlement))) {
@@ -87,7 +144,9 @@ function buildDisplayName(props: PhotonProperties): string {
     props.county,
     props.state,
     props.country,
-  ].filter((value, index, all) => value && all.indexOf(value) === index);
+  ]
+    .filter((value, index, all) => value && all.indexOf(value) === index)
+    .map((value) => toCyrillic(value as string));
   return segments.join(", ");
 }
 
