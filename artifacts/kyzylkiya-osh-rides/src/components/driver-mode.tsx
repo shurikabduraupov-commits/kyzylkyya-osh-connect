@@ -150,6 +150,70 @@ export function DriverMode() {
     return true;
   });
 
+  if (!hasSavedProfile) {
+    return (
+      <div className="space-y-4">
+        <Card className="shadow-sm border-border">
+          <CardContent className="p-5 space-y-4">
+            <div className="space-y-1">
+              <h2 className="font-display font-bold text-xl">{t("driver.onboard.title")}</h2>
+              <p className="text-sm text-muted-foreground">{t("driver.onboard.desc")}</p>
+            </div>
+            <Form {...form}>
+              <form
+                onSubmit={form.handleSubmit((data) => {
+                  const next = updateProfile({
+                    driverName: data.driverName,
+                    driverPhone: data.driverPhone,
+                  });
+                  setSavedProfile(next);
+                })}
+                className="space-y-4"
+              >
+                <FormField
+                  control={form.control}
+                  name="driverName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("driver.dialog.name")}</FormLabel>
+                      <FormControl>
+                        <Input placeholder={t("driver.dialog.name.placeholder")} className="h-12" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="driverPhone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("driver.dialog.phone")}</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            placeholder={t("driver.dialog.phone.placeholder")}
+                            className="h-12 pl-10"
+                            {...field}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" className="w-full h-12 font-semibold">
+                  {t("driver.onboard.submit")}
+                </Button>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between px-1">

@@ -89,6 +89,9 @@ const translations: Record<Language, Dict> = {
     "driver.error.phone": "Туура телефон номерин жазыңыз",
     "driver.profile.as": "Сиз: {name} • {phone}",
     "driver.profile.change": "Өзгөртүү",
+    "driver.onboard.title": "Айдоочу катары катталыңыз",
+    "driver.onboard.desc": "Атыңызды жана телефонуңузду бир жолу гана жазыңыз. Андан кийин буйрутмалар бир баскычта кабыл алынат.",
+    "driver.onboard.submit": "Сактоо жана уланту",
 
     "time.now": "азыр эле",
     "time.minutes": "{n} мүнөт мурун",
@@ -181,6 +184,9 @@ const translations: Record<Language, Dict> = {
     "driver.error.phone": "Введите корректный номер телефона",
     "driver.profile.as": "Вы: {name} • {phone}",
     "driver.profile.change": "Изменить",
+    "driver.onboard.title": "Зарегистрируйтесь как водитель",
+    "driver.onboard.desc": "Введите имя и телефон один раз. После этого заявки принимаются в один клик.",
+    "driver.onboard.submit": "Сохранить и продолжить",
 
     "time.now": "только что",
     "time.minutes": "{n} мин назад",
