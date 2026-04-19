@@ -23,6 +23,8 @@ export interface CreateRideRequest {
   destination: string;
   /** @minLength 3 */
   pickupAddress: string;
+  /** @maxLength 500 */
+  notes?: string;
   /**
    * @minimum 1
    * @maximum 7
@@ -42,6 +44,7 @@ export interface RideRequest {
   origin: string;
   destination: string;
   pickupAddress: string;
+  notes: string | null;
   seats: number;
   route: string;
   status: RideStatus;

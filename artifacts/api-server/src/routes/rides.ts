@@ -6,6 +6,7 @@ type RideRequest = {
   origin: string;
   destination: string;
   pickupAddress: string;
+  notes: string | null;
   seats: number;
   route: string;
   status: "active" | "accepted";
@@ -28,6 +29,8 @@ router.post("/requests", (req, res) => {
   const origin = String(req.body?.origin ?? "").trim();
   const destination = String(req.body?.destination ?? "").trim();
   const pickupAddress = String(req.body?.pickupAddress ?? "").trim();
+  const notesRaw = String(req.body?.notes ?? "").trim();
+  const notes = notesRaw.length === 0 ? null : notesRaw.slice(0, 500);
   const seats = Number(req.body?.seats);
 
   if (origin.length < 2) {
@@ -60,6 +63,7 @@ router.post("/requests", (req, res) => {
     origin,
     destination,
     pickupAddress,
+    notes,
     seats,
     route: makeRoute(origin, destination),
     status: "active",

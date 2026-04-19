@@ -178,6 +178,11 @@ export function DriverMode() {
                       <div>
                         <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium">Алып кетүү дареги</p>
                         <p className="font-semibold text-lg leading-tight">{request.pickupAddress}</p>
+                        {request.notes && (
+                          <p className="mt-1.5 text-sm text-foreground/80 bg-muted/50 rounded-md px-2.5 py-1.5 leading-snug">
+                            {request.notes}
+                          </p>
+                        )}
                         <div className="flex items-center gap-3 mt-1.5 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1 font-medium text-foreground/80">
                             <Users className="w-3.5 h-3.5" />

@@ -9,6 +9,7 @@ import {
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,6 +22,7 @@ const createRideSchema = z.object({
   origin: z.string().min(2, "Кайсы жерден чыгарыңызды тандаңыз"),
   destination: z.string().min(2, "Каякка барарыңызды тандаңыз"),
   pickupAddress: z.string().min(3, "Так даректи жазыңыз"),
+  notes: z.string().max(500, "500 белгиден ашпасын").optional(),
   seats: z.coerce.number().min(1).max(7),
 }).refine((value) => value.origin !== value.destination, {
   message: "Чыгуу жана баруу пункттары башка болушу керек",
@@ -39,6 +41,7 @@ export function PassengerMode() {
       origin: DEFAULT_ORIGIN,
       destination: DEFAULT_DESTINATION,
       pickupAddress: "",
+      notes: "",
       seats: 1,
     },
   });
@@ -77,7 +80,11 @@ export function PassengerMode() {
   );
 
   const onSubmit = (data: CreateRideValues) => {
-    createMutation.mutate({ data });
+    const payload = {
+      ...data,
+      notes: data.notes?.trim() ? data.notes.trim() : undefined,
+    };
+    createMutation.mutate({ data: payload });
   };
 
   const resetRequest = () => {
@@ -228,6 +235,25 @@ export function PassengerMode() {
                   <p className="text-xs text-muted-foreground">
                     OpenStreetMap маалымат базасынан көчө/объект тандаңыз
                   </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-foreground">Кошумча эскертүү</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="мисалы: үй номери, көрүнгөн белги, жүк бар"
+                      className="min-h-[80px] text-base resize-none"
+                      maxLength={500}
+                      {...field}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

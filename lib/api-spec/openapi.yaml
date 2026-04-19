@@ -141,6 +141,9 @@ components:
         pickupAddress:
           type: string
           minLength: 3
+        notes:
+          type: string
+          maxLength: 500
         seats:
           type: integer
           minimum: 1
@@ -173,6 +176,9 @@ components:
           type: string
         pickupAddress:
           type: string
+        notes:
+          type: string
+          nullable: true
         seats:
           type: integer
         route:
@@ -197,6 +203,7 @@ components:
         - origin
         - destination
         - pickupAddress
+        - notes
         - seats
         - route
         - status

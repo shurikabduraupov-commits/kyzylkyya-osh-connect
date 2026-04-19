@@ -85,6 +85,9 @@ class RideHandler(BaseHTTPRequestHandler):
             origin = str(data.get("origin", "")).strip()
             destination = str(data.get("destination", "")).strip()
             pickup_address = str(data.get("pickupAddress", "")).strip()
+            notes = str(data.get("notes", "")).strip()
+            if len(notes) > 500:
+                notes = notes[:500]
             seats = data.get("seats")
             try:
                 seats_number = int(seats)
@@ -111,6 +114,7 @@ class RideHandler(BaseHTTPRequestHandler):
                 "origin": origin,
                 "destination": destination,
                 "pickupAddress": pickup_address,
+                "notes": notes or None,
                 "seats": seats_number,
                 "route": make_route(origin, destination),
                 "status": "active",

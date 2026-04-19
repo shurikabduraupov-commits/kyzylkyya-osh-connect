@@ -23,6 +23,7 @@ export const ListRideRequestsResponseItem = zod.object({
   origin: zod.string(),
   destination: zod.string(),
   pickupAddress: zod.string(),
+  notes: zod.string().nullable(),
   seats: zod.number(),
   route: zod.string(),
   status: zod.enum(["active", "accepted"]),
@@ -42,12 +43,15 @@ export const createRideRequestBodyDestinationMin = 2;
 
 export const createRideRequestBodyPickupAddressMin = 3;
 
+export const createRideRequestBodyNotesMax = 500;
+
 export const createRideRequestBodySeatsMax = 7;
 
 export const CreateRideRequestBody = zod.object({
   origin: zod.string().min(createRideRequestBodyOriginMin),
   destination: zod.string().min(createRideRequestBodyDestinationMin),
   pickupAddress: zod.string().min(createRideRequestBodyPickupAddressMin),
+  notes: zod.string().max(createRideRequestBodyNotesMax).optional(),
   seats: zod.number().min(1).max(createRideRequestBodySeatsMax),
 });
 
@@ -63,6 +67,7 @@ export const GetRideRequestResponse = zod.object({
   origin: zod.string(),
   destination: zod.string(),
   pickupAddress: zod.string(),
+  notes: zod.string().nullable(),
   seats: zod.number(),
   route: zod.string(),
   status: zod.enum(["active", "accepted"]),
@@ -93,6 +98,7 @@ export const AcceptRideRequestResponse = zod.object({
   origin: zod.string(),
   destination: zod.string(),
   pickupAddress: zod.string(),
+  notes: zod.string().nullable(),
   seats: zod.number(),
   route: zod.string(),
   status: zod.enum(["active", "accepted"]),
