@@ -93,15 +93,16 @@ export async function searchNominatim({
   signal?: AbortSignal;
 }): Promise<NominatimSuggestion[]> {
   const trimmed = query.trim();
-  if (trimmed.length < 2) return [];
+  if (trimmed.length < 1) return [];
 
   const params = new URLSearchParams({
     q: city ? `${trimmed}, ${city}` : trimmed,
     format: "json",
     addressdetails: "1",
-    limit: "8",
+    limit: "10",
     countrycodes: "kg",
     "accept-language": "ky,ru",
+    dedupe: "1",
   });
 
   const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {

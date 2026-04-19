@@ -28,7 +28,7 @@ export function AddressAutocomplete({ value, onChange, city, placeholder, id }: 
     }
 
     const trimmed = value.trim();
-    if (trimmed.length < 2) {
+    if (trimmed.length < 1) {
       setSuggestions([]);
       setError(null);
       setLoading(false);
@@ -54,7 +54,7 @@ export function AddressAutocomplete({ value, onChange, city, placeholder, id }: 
       } finally {
         setLoading(false);
       }
-    }, 350);
+    }, 200);
 
     return () => {
       controller.abort();
@@ -119,7 +119,7 @@ export function AddressAutocomplete({ value, onChange, city, placeholder, id }: 
             <div className="px-4 py-3 text-sm text-destructive">{error}</div>
           )}
 
-          {!loading && !error && suggestions.length === 0 && value.trim().length >= 2 && (
+          {!loading && !error && suggestions.length === 0 && value.trim().length >= 1 && (
             <div className="px-4 py-3 text-sm text-muted-foreground">Эч нерсе табылган жок</div>
           )}
 
