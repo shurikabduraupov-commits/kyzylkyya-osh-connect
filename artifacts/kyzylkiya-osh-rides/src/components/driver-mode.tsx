@@ -28,6 +28,8 @@ export function DriverMode() {
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [originFilter, setOriginFilter] = useState(ALL_ROUTES_VALUE);
   const [destinationFilter, setDestinationFilter] = useState(ALL_ROUTES_VALUE);
+  const [savedProfile, setSavedProfile] = useState(() => readProfile());
+  const hasSavedProfile = savedProfile.driverName.length >= 2 && savedProfile.driverPhone.length >= 5;
 
   const acceptRideSchema = useMemo(
     () =>
@@ -61,10 +63,11 @@ export function DriverMode() {
   const acceptMutation = useAcceptRideRequest({
     mutation: {
       onSuccess: (_data, variables) => {
-        updateProfile({
+        const next = updateProfile({
           driverName: variables.data.driverName,
           driverPhone: variables.data.driverPhone,
         });
+        setSavedProfile(next);
         toast({
           title: t("driver.toast.accepted.title"),
           description: t("driver.toast.accepted.desc"),
@@ -83,14 +86,39 @@ export function DriverMode() {
     },
   });
 
-  const initialProfile = useMemo(() => readProfile(), []);
   const form = useForm<AcceptRideValues>({
     resolver: zodResolver(acceptRideSchema),
     defaultValues: {
-      driverName: initialProfile.driverName,
-      driverPhone: initialProfile.driverPhone,
+      driverName: savedProfile.driverName,
+      driverPhone: savedProfile.driverPhone,
     },
   });
+
+  const handleAcceptClick = (id: string) => {
+    if (hasSavedProfile) {
+      acceptMutation.mutate({
+        id,
+        data: {
+          driverName: savedProfile.driverName,
+          driverPhone: savedProfile.driverPhone,
+        },
+      });
+      return;
+    }
+    form.reset({
+      driverName: savedProfile.driverName,
+      driverPhone: savedProfile.driverPhone,
+    });
+    setSelectedRequestId(id);
+  };
+
+  const handleEditProfile = () => {
+    form.reset({
+      driverName: savedProfile.driverName,
+      driverPhone: savedProfile.driverPhone,
+    });
+    setSelectedRequestId("__edit__");
+  };
 
   useEffect(() => {
     if (Object.keys(form.formState.errors).length > 0) {
@@ -100,6 +128,15 @@ export function DriverMode() {
 
   const onSubmit = (data: AcceptRideValues) => {
     if (!selectedRequestId) return;
+    if (selectedRequestId === "__edit__") {
+      const next = updateProfile({
+        driverName: data.driverName,
+        driverPhone: data.driverPhone,
+      });
+      setSavedProfile(next);
+      setSelectedRequestId(null);
+      return;
+    }
     acceptMutation.mutate({
       id: selectedRequestId,
       data,
@@ -122,6 +159,26 @@ export function DriverMode() {
           {t("driver.live")}
         </div>
       </div>
+
+      {hasSavedProfile && (
+        <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-muted/60 border border-border/60 text-sm">
+          <span className="truncate text-foreground/80">
+            {t("driver.profile.as", {
+              name: savedProfile.driverName,
+              phone: savedProfile.driverPhone,
+            })}
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs font-semibold text-primary hover:text-primary shrink-0"
+            onClick={handleEditProfile}
+          >
+            {t("driver.profile.change")}
+          </Button>
+        </div>
+      )}
 
       <Card className="shadow-sm border-border">
         <CardContent className="p-4 space-y-3">
@@ -218,7 +275,8 @@ export function DriverMode() {
                   <Button
                     className="w-full font-semibold shadow-none"
                     variant="default"
-                    onClick={() => setSelectedRequestId(request.id)}
+                    onClick={() => handleAcceptClick(request.id)}
+                    disabled={acceptMutation.isPending}
                   >
                     {t("driver.card.accept")}
                   </Button>

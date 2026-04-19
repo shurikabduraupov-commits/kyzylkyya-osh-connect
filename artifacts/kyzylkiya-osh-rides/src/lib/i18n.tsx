@@ -87,6 +87,8 @@ const translations: Record<Language, Dict> = {
     "driver.toast.error.desc": "Заказды кабыл алуу мүмкүн болгон жок. Балким, аны башка айдоочу алган.",
     "driver.error.name": "Атыңыз өтө кыска",
     "driver.error.phone": "Туура телефон номерин жазыңыз",
+    "driver.profile.as": "Сиз: {name} • {phone}",
+    "driver.profile.change": "Өзгөртүү",
 
     "time.now": "азыр эле",
     "time.minutes": "{n} мүнөт мурун",
@@ -177,6 +179,8 @@ const translations: Record<Language, Dict> = {
     "driver.toast.error.desc": "Не удалось принять заказ. Возможно, его уже забрал другой водитель.",
     "driver.error.name": "Имя слишком короткое",
     "driver.error.phone": "Введите корректный номер телефона",
+    "driver.profile.as": "Вы: {name} • {phone}",
+    "driver.profile.change": "Изменить",
 
     "time.now": "только что",
     "time.minutes": "{n} мин назад",
