@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { DEFAULT_DESTINATION, DEFAULT_ORIGIN, KYRGYZSTAN_SETTLEMENTS } from "@/lib/settlements";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { useTranslation } from "@/lib/i18n";
+import { readProfile, updateProfile } from "@/lib/profile";
 
 export function PassengerMode() {
   const { t, lang } = useTranslation();
@@ -43,11 +44,12 @@ export function PassengerMode() {
 
   type CreateRideValues = z.infer<typeof createRideSchema>;
 
+  const initialProfile = useMemo(() => readProfile(), []);
   const form = useForm<CreateRideValues>({
     resolver: zodResolver(createRideSchema),
     defaultValues: {
-      origin: DEFAULT_ORIGIN,
-      destination: DEFAULT_DESTINATION,
+      origin: initialProfile.lastOrigin || DEFAULT_ORIGIN,
+      destination: initialProfile.lastDestination || DEFAULT_DESTINATION,
       pickupAddress: "",
       notes: "",
       seats: 1,
@@ -98,6 +100,7 @@ export function PassengerMode() {
       ...data,
       notes: data.notes?.trim() ? data.notes.trim() : undefined,
     };
+    updateProfile({ lastOrigin: data.origin, lastDestination: data.destination });
     createMutation.mutate({ data: payload });
   };
 

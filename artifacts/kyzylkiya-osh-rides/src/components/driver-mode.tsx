@@ -19,6 +19,7 @@ import { MapPin, Users, Clock, Phone, Navigation, ArrowRight } from "lucide-reac
 import { useToast } from "@/hooks/use-toast";
 import { ALL_ROUTES_VALUE, KYRGYZSTAN_SETTLEMENTS } from "@/lib/settlements";
 import { useTranslation } from "@/lib/i18n";
+import { readProfile, updateProfile } from "@/lib/profile";
 
 export function DriverMode() {
   const { t, lang } = useTranslation();
@@ -59,7 +60,11 @@ export function DriverMode() {
 
   const acceptMutation = useAcceptRideRequest({
     mutation: {
-      onSuccess: () => {
+      onSuccess: (_data, variables) => {
+        updateProfile({
+          driverName: variables.data.driverName,
+          driverPhone: variables.data.driverPhone,
+        });
         toast({
           title: t("driver.toast.accepted.title"),
           description: t("driver.toast.accepted.desc"),
@@ -78,11 +83,12 @@ export function DriverMode() {
     },
   });
 
+  const initialProfile = useMemo(() => readProfile(), []);
   const form = useForm<AcceptRideValues>({
     resolver: zodResolver(acceptRideSchema),
     defaultValues: {
-      driverName: "",
-      driverPhone: "",
+      driverName: initialProfile.driverName,
+      driverPhone: initialProfile.driverPhone,
     },
   });
 
