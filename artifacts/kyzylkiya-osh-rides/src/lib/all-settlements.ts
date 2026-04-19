@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { KYRGYZSTAN_SETTLEMENTS } from "@/lib/settlements";
 
-const STORAGE_KEY = "mak.kg.settlements.v1";
+const STORAGE_KEY = "mak.kg.settlements.v2";
 const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
 type CachePayload = {
@@ -90,10 +90,10 @@ type OverpassElement = {
 };
 
 const OVERPASS_QUERY = `
-[out:json][timeout:60];
+[out:json][timeout:90];
 area["ISO3166-1"="KG"][admin_level=2]->.kg;
 (
-  node["place"~"^(city|town|village)$"]["name"](area.kg);
+  node["place"~"^(city|town|village|hamlet|suburb|locality|isolated_dwelling)$"]["name"](area.kg);
 );
 out tags;
 `;
