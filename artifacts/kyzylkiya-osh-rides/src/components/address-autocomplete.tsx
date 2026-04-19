@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, MapPin, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { searchNominatim, type NominatimSuggestion } from "@/lib/nominatim";
 
 type Props = {
@@ -17,7 +16,6 @@ export function AddressAutocomplete({ value, onChange, city, placeholder, id }: 
   const [suggestions, setSuggestions] = useState<NominatimSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasFocus, setHasFocus] = useState(false);
   const skipNextSearchRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -47,10 +45,11 @@ export function AddressAutocomplete({ value, onChange, city, placeholder, id }: 
           signal: controller.signal,
         });
         setSuggestions(results);
-        if (hasFocus) setOpen(true);
+        setOpen(true);
       } catch (err) {
         if ((err as Error).name === "AbortError") return;
         setError("Издөө учурунда ката кетти");
+        setOpen(true);
       } finally {
         setLoading(false);
       }
@@ -60,7 +59,17 @@ export function AddressAutocomplete({ value, onChange, city, placeholder, id }: 
       controller.abort();
       clearTimeout(timer);
     };
-  }, [value, city, hasFocus]);
+  }, [value, city]);
+
+  useEffect(() => {
+    function handleClick(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   const handleSelect = (suggestion: NominatimSuggestion) => {
     skipNextSearchRef.current = true;
@@ -69,45 +78,36 @@ export function AddressAutocomplete({ value, onChange, city, placeholder, id }: 
     setOpen(false);
   };
 
+  const showDropdown =
+    open && (loading || !!error || suggestions.length > 0 || value.trim().length >= 1);
+
   return (
     <div ref={containerRef} className="relative w-full">
-      <Popover open={open && (suggestions.length > 0 || loading || !!error)} onOpenChange={setOpen}>
-        <PopoverAnchor asChild>
-          <div className="relative">
-            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
-            <Input
-              id={id}
-              autoComplete="off"
-              placeholder={placeholder}
-              className="pl-10 pr-10 h-12 text-base"
-              value={value}
-              onChange={(event) => {
-                onChange(event.target.value);
-                if (!open) setOpen(true);
-              }}
-              onFocus={() => {
-                setHasFocus(true);
-                if (suggestions.length > 0) setOpen(true);
-              }}
-              onBlur={() => {
-                setHasFocus(false);
-                window.setTimeout(() => setOpen(false), 120);
-              }}
-            />
-            {loading ? (
-              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin" />
-            ) : (
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
-            )}
-          </div>
-        </PopoverAnchor>
+      <div className="relative">
+        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
+        <Input
+          id={id}
+          autoComplete="off"
+          placeholder={placeholder}
+          className="pl-10 pr-10 h-12 text-base"
+          value={value}
+          onChange={(event) => {
+            onChange(event.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => {
+            if (value.trim().length >= 1) setOpen(true);
+          }}
+        />
+        {loading ? (
+          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin" />
+        ) : (
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
+        )}
+      </div>
 
-        <PopoverContent
-          align="start"
-          sideOffset={4}
-          onOpenAutoFocus={(event) => event.preventDefault()}
-          className="w-[var(--radix-popover-trigger-width)] p-0 max-h-[300px] overflow-y-auto"
-        >
+      {showDropdown && (
+        <div className="absolute z-50 left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-[300px] overflow-y-auto">
           {loading && suggestions.length === 0 && (
             <div className="px-4 py-3 text-sm text-muted-foreground flex items-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -135,13 +135,15 @@ export function AddressAutocomplete({ value, onChange, city, placeholder, id }: 
             >
               <MapPin className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
               <div className="min-w-0 flex-1">
-                <p className="font-medium text-sm leading-tight truncate">{suggestion.shortLabel}</p>
-                <p className="text-xs text-muted-foreground truncate mt-0.5">{suggestion.displayName}</p>
+                <p className="font-medium text-sm leading-tight">{suggestion.shortLabel}</p>
+                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                  {suggestion.displayName}
+                </p>
               </div>
             </button>
           ))}
-        </PopoverContent>
-      </Popover>
+        </div>
+      )}
     </div>
   );
 }
