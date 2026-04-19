@@ -1,7 +1,8 @@
 import { useGetRideStats, getGetRideStatsQueryKey } from "@workspace/api-client-react";
 import { PassengerMode } from "@/components/passenger-mode";
 import { DriverMode } from "@/components/driver-mode";
-import { Map, UserRound, CarFront, Languages } from "lucide-react";
+import { UserRound, CarFront, Languages } from "lucide-react";
+import { PoppyIcon } from "@/components/poppy-icon";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "@/lib/i18n";
 
@@ -24,8 +25,8 @@ export function Home() {
         <div className="max-w-md mx-auto relative z-10">
           <div className="flex items-center justify-between mb-6 gap-3">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="bg-white/20 p-2 rounded-xl backdrop-blur-sm shrink-0">
-                <Map className="w-6 h-6 text-white" />
+              <div className="bg-white p-1.5 rounded-xl shadow-sm shrink-0">
+                <PoppyIcon className="w-7 h-7 text-primary" />
               </div>
               <div className="min-w-0">
                 <h1 className="font-display text-2xl font-bold tracking-tight leading-none">
