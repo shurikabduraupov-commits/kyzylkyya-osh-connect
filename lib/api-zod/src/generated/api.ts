@@ -171,6 +171,28 @@ export const AcceptRideRequestResponse = zod.object({
 });
 
 /**
+ * @summary List drivers who recently accepted rides
+ */
+export const ListActiveDriversResponseItem = zod.object({
+  driverName: zod.string(),
+  driverPhone: zod.string(),
+  driverAge: zod.number(),
+  driverExperience: zod.number(),
+  carMake: zod.string(),
+  carYear: zod.number(),
+  carPlate: zod.string(),
+  carColor: zod.string(),
+  carSeats: zod.number(),
+  route: zod.string(),
+  origin: zod.string(),
+  destination: zod.string(),
+  lastSeenAt: zod.coerce.date(),
+});
+export const ListActiveDriversResponse = zod.array(
+  ListActiveDriversResponseItem,
+);
+
+/**
  * @summary Small dashboard summary
  */
 export const GetRideStatsResponse = zod.object({

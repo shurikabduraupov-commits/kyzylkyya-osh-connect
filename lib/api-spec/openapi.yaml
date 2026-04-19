@@ -105,6 +105,20 @@ paths:
           description: Request not found
         "409":
           description: Request already accepted
+  /drivers:
+    get:
+      operationId: listActiveDrivers
+      tags: [rides]
+      summary: List drivers who recently accepted rides
+      responses:
+        "200":
+          description: Active drivers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActiveDriver"
   /stats:
     get:
       operationId: getRideStats
@@ -287,6 +301,50 @@ components:
         - departBefore
         - createdAt
         - acceptedAt
+    ActiveDriver:
+      type: object
+      properties:
+        driverName:
+          type: string
+        driverPhone:
+          type: string
+        driverAge:
+          type: integer
+        driverExperience:
+          type: integer
+        carMake:
+          type: string
+        carYear:
+          type: integer
+        carPlate:
+          type: string
+        carColor:
+          type: string
+        carSeats:
+          type: integer
+        route:
+          type: string
+        origin:
+          type: string
+        destination:
+          type: string
+        lastSeenAt:
+          type: string
+          format: date-time
+      required:
+        - driverName
+        - driverPhone
+        - driverAge
+        - driverExperience
+        - carMake
+        - carYear
+        - carPlate
+        - carColor
+        - carSeats
+        - route
+        - origin
+        - destination
+        - lastSeenAt
     RideStats:
       type: object
       properties:

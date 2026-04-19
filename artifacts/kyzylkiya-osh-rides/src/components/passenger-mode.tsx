@@ -19,6 +19,7 @@ import { DEFAULT_DESTINATION, DEFAULT_ORIGIN } from "@/lib/settlements";
 import { useAllSettlements } from "@/lib/all-settlements";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { SettlementCombobox } from "@/components/settlement-combobox";
+import { ActiveDriversList } from "@/components/active-drivers-list";
 import { useTranslation } from "@/lib/i18n";
 import { readProfile, updateProfile } from "@/lib/profile";
 import { prefetchCityPlaces } from "@/lib/nominatim";
@@ -276,7 +277,11 @@ export function PassengerMode() {
     return <WaitingCard route={activeRequest?.route || form.getValues("origin") + " → " + form.getValues("destination")} />;
   }
 
+  const watchOrigin = form.watch("origin");
+  const watchDestination = form.watch("destination");
+
   return (
+    <div className="space-y-4">
     <Card className="w-full shadow-sm border-border">
       <CardHeader className="pb-4">
         <CardTitle className="font-display text-2xl font-bold">{t("passenger.title")}</CardTitle>
@@ -490,6 +495,8 @@ export function PassengerMode() {
         </Form>
       </CardContent>
     </Card>
+    <ActiveDriversList origin={watchOrigin} destination={watchDestination} />
+    </div>
   );
 }
 

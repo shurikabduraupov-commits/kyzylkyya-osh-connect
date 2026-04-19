@@ -7,6 +7,7 @@
  */
 
 export * from "./acceptRideRequest";
+export * from "./activeDriver";
 export * from "./createRideRequest";
 export * from "./healthStatus";
 export * from "./rideRequest";

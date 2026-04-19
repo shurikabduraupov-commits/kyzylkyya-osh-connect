@@ -91,6 +91,22 @@ export interface RideRequest {
   acceptedAt: string | null;
 }
 
+export interface ActiveDriver {
+  driverName: string;
+  driverPhone: string;
+  driverAge: number;
+  driverExperience: number;
+  carMake: string;
+  carYear: number;
+  carPlate: string;
+  carColor: string;
+  carSeats: number;
+  route: string;
+  origin: string;
+  destination: string;
+  lastSeenAt: string;
+}
+
 export interface RideStats {
   activeRequests: number;
   acceptedRequests: number;

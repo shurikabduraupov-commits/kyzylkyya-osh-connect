@@ -18,6 +18,7 @@ import type {
 
 import type {
   AcceptRideRequest,
+  ActiveDriver,
   CreateRideRequest,
   HealthStatus,
   RideRequest,
@@ -443,6 +444,81 @@ export const useAcceptRideRequest = <
 > => {
   return useMutation(getAcceptRideRequestMutationOptions(options));
 };
+
+/**
+ * @summary List drivers who recently accepted rides
+ */
+export const getListActiveDriversUrl = () => {
+  return `/rides-api/drivers`;
+};
+
+export const listActiveDrivers = async (
+  options?: RequestInit,
+): Promise<ActiveDriver[]> => {
+  return customFetch<ActiveDriver[]>(getListActiveDriversUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListActiveDriversQueryKey = () => {
+  return [`/rides-api/drivers`] as const;
+};
+
+export const getListActiveDriversQueryOptions = <
+  TData = Awaited<ReturnType<typeof listActiveDrivers>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listActiveDrivers>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListActiveDriversQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listActiveDrivers>>
+  > = ({ signal }) => listActiveDrivers({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listActiveDrivers>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListActiveDriversQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listActiveDrivers>>
+>;
+export type ListActiveDriversQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List drivers who recently accepted rides
+ */
+
+export function useListActiveDrivers<
+  TData = Awaited<ReturnType<typeof listActiveDrivers>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listActiveDrivers>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListActiveDriversQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Small dashboard summary

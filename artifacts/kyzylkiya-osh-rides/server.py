@@ -88,6 +88,33 @@ class RideHandler(BaseHTTPRequestHandler):
         if parts == ["settlements"]:
             self._send_json(200, custom_settlements)
             return
+        if parts == ["drivers"]:
+            accepted = [item for item in requests_store if item["status"] == "accepted" and item.get("driverPhone")]
+            accepted.sort(key=lambda r: r.get("acceptedAt") or "", reverse=True)
+            seen = set()
+            drivers = []
+            for ride in accepted:
+                phone = ride.get("driverPhone")
+                if phone in seen:
+                    continue
+                seen.add(phone)
+                drivers.append({
+                    "driverName": ride.get("driverName"),
+                    "driverPhone": phone,
+                    "driverAge": ride.get("driverAge"),
+                    "driverExperience": ride.get("driverExperience"),
+                    "carMake": ride.get("carMake"),
+                    "carYear": ride.get("carYear"),
+                    "carPlate": ride.get("carPlate"),
+                    "carColor": ride.get("carColor"),
+                    "carSeats": ride.get("carSeats"),
+                    "route": ride.get("route"),
+                    "origin": ride.get("origin"),
+                    "destination": ride.get("destination"),
+                    "lastSeenAt": ride.get("acceptedAt"),
+                })
+            self._send_json(200, drivers)
+            return
         if parts == ["stats"]:
             active = [item for item in requests_store if item["status"] == "active"]
             accepted = [item for item in requests_store if item["status"] == "accepted"]
