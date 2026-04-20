@@ -4,11 +4,12 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
-const rawPort = process.env.PORT;
-const port = Number(rawPort ?? "5173");
+// Railway (and others) may set PORT="" during image build; Number("") is 0 and would fail below.
+const rawPort = process.env.PORT?.trim();
+const port = Number(rawPort && rawPort.length > 0 ? rawPort : "5173");
 
 if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
+  throw new Error(`Invalid PORT value: "${process.env.PORT ?? ""}"`);
 }
 
 const basePath = process.env.BASE_PATH ?? "/";
