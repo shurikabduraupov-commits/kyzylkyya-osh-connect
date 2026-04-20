@@ -8,6 +8,7 @@ export type NominatimSuggestion = {
   lon: string;
   searchTerms: string[];
 };
+import { apiUrl } from "@/lib/api-url";
 
 const DIGRAPH_MAP: Array<[RegExp, string]> = [
   [/shch/gi, "щ"],
@@ -379,8 +380,35 @@ export async function searchNominatim({
   const trimmed = query.trim();
   if (trimmed.length < 1) return [];
 
+  const fallbackSearch = async (): Promise<NominatimSuggestion[]> => {
+    const params = new URLSearchParams();
+    params.set("q", trimmed);
+    params.set("city", city);
+    const resp = await fetch(apiUrl(`/rides-api/address-search?${params.toString()}`), { signal });
+    if (!resp.ok) return [];
+    const payload = await resp.json().catch(() => []);
+    if (!Array.isArray(payload)) return [];
+    return payload
+      .map((item) => ({
+        placeId: String(item?.placeId ?? ""),
+        displayName: String(item?.displayName ?? ""),
+        shortLabel: String(item?.shortLabel ?? ""),
+        category: String(item?.category ?? ""),
+        type: String(item?.type ?? ""),
+        lat: String(item?.lat ?? ""),
+        lon: String(item?.lon ?? ""),
+        searchTerms: Array.isArray(item?.searchTerms)
+          ? item.searchTerms.map((v: unknown) => String(v).toLowerCase())
+          : [],
+      }))
+      .filter((item) => item.placeId && item.shortLabel);
+  };
+
   const places = await getCityPlaces(city);
   if (signal?.aborted) return [];
+  if (places.length === 0) {
+    return fallbackSearch();
+  }
 
   const needles = buildHaystacks(trimmed);
 
@@ -398,5 +426,7 @@ export async function searchNominatim({
     return 0;
   });
 
-  return matches.slice(0, 20);
+  const top = matches.slice(0, 20);
+  if (top.length > 0) return top;
+  return fallbackSearch();
 }

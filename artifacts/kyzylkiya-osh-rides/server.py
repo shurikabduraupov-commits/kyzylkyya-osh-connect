@@ -1,6 +1,8 @@
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from datetime import datetime, timezone
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs, urlencode
+from urllib.request import Request, urlopen
+from urllib.error import URLError, HTTPError
 import json
 import re
 import os
@@ -120,6 +122,68 @@ def verify_telegram_widget_auth(payload):
     return hmac.compare_digest(calc_hash, incoming_hash)
 
 
+def search_addresses(city, query):
+    query = str(query or "").strip()
+    city = str(city or "").strip()
+    if len(query) < 1:
+        return []
+    q = f"{query}, {city}, Kyrgyzstan" if city else f"{query}, Kyrgyzstan"
+    params = urlencode(
+        {
+            "format": "jsonv2",
+            "addressdetails": "1",
+            "countrycodes": "kg",
+            "limit": "20",
+            "q": q,
+        }
+    )
+    url = f"https://nominatim.openstreetmap.org/search?{params}"
+    request = Request(
+        url,
+        headers={
+            "User-Agent": "mak-kg-rides/1.0",
+            "Accept": "application/json",
+        },
+    )
+    try:
+        with urlopen(request, timeout=8) as response:
+            data = json.loads(response.read().decode("utf-8"))
+    except (HTTPError, URLError, TimeoutError, json.JSONDecodeError):
+        return []
+
+    seen = set()
+    results = []
+    for item in data if isinstance(data, list) else []:
+        display = str(item.get("display_name", "")).strip()
+        if not display:
+            continue
+        key = display.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        parts = [p.strip() for p in display.split(",") if p.strip()]
+        short = ", ".join(parts[:2]) if parts else display
+        place_id = str(item.get("place_id") or item.get("osm_id") or uuid.uuid4().hex)
+        lat = str(item.get("lat", ""))
+        lon = str(item.get("lon", ""))
+        category = str(item.get("class", "") or "address")
+        item_type = str(item.get("type", "") or "")
+        terms = list({display.lower(), short.lower(), query.lower(), city.lower()})
+        results.append(
+            {
+                "placeId": place_id,
+                "displayName": display,
+                "shortLabel": short,
+                "category": category,
+                "type": item_type,
+                "lat": lat,
+                "lon": lon,
+                "searchTerms": terms,
+            }
+        )
+    return results[:20]
+
+
 class RideHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         return
@@ -152,6 +216,8 @@ class RideHandler(BaseHTTPRequestHandler):
         self._send_json(200, {"ok": True})
 
     def do_GET(self):
+        parsed = urlparse(self.path)
+        query_params = parse_qs(parsed.query)
         parts = self._path_parts()
         if parts == ["healthz"]:
             self._send_json(200, {"status": "ok"})
@@ -272,6 +338,11 @@ class RideHandler(BaseHTTPRequestHandler):
                     "botUsername": TELEGRAM_BOT_USERNAME,
                 },
             )
+            return
+        if parts == ["address-search"]:
+            city = str(query_params.get("city", [""])[0]).strip()
+            query = str(query_params.get("q", [""])[0]).strip()
+            self._send_json(200, search_addresses(city, query))
             return
         self._send_json(404, {"message": "Маршрут табылган жок"})
 
