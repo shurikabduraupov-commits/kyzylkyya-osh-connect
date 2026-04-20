@@ -129,15 +129,22 @@ def _http_get_json(url, headers, timeout=12):
         return json.loads(response.read().decode("utf-8"))
 
 
+def _in_kyrgyzstan(lon, lat):
+    try:
+        lo, la = float(lon), float(lat)
+    except (TypeError, ValueError):
+        return False
+    return 69.0 <= lo <= 80.7 and 39.0 <= la <= 43.4
+
+
 def _search_photon(city, query):
-    """Komoot Photon — usually works from cloud hosts; bbox limits to Kyrgyzstan."""
+    """Komoot Photon — works from cloud hosts. Do not pass bbox=… (Photon returns HTTP 400)."""
     q = f"{query} {city}".strip() if city else query
     params = urlencode(
         {
             "q": q,
-            "limit": "25",
+            "limit": "40",
             "lang": "ru",
-            "bbox": "69.1,39.0,80.5,43.5",
         }
     )
     url = f"https://photon.komoot.io/api/?{params}"
@@ -160,7 +167,10 @@ def _search_photon(city, query):
             continue
         lon, lat = coords[0], coords[1]
         cc = str(props.get("countrycode", "")).lower()
-        if cc and cc != "kg":
+        if cc:
+            if cc != "kg":
+                continue
+        elif not _in_kyrgyzstan(lon, lat):
             continue
         name = str(props.get("name") or props.get("street") or "").strip()
         street = str(props.get("street") or "").strip()
@@ -206,27 +216,7 @@ def _search_photon(city, query):
     return results[:20]
 
 
-def _search_nominatim(city, query):
-    q = f"{query}, {city}, Kyrgyzstan" if city else f"{query}, Kyrgyzstan"
-    params = urlencode(
-        {
-            "format": "jsonv2",
-            "addressdetails": "1",
-            "countrycodes": "kg",
-            "limit": "20",
-            "q": q,
-        }
-    )
-    url = f"https://nominatim.openstreetmap.org/search?{params}"
-    headers = {
-        "Accept": "application/json",
-        "User-Agent": "KyzylKyya-Osh-Connect/1.0 (+https://github.com/shurikabduraupov-commits/kyzylkyya-osh-connect)",
-    }
-    try:
-        data = _http_get_json(url, headers, timeout=10)
-    except (HTTPError, URLError, TimeoutError, socket.timeout, json.JSONDecodeError, OSError):
-        return []
-
+def _nominatim_parse_items(data, query, city):
     seen = set()
     results = []
     for item in data if isinstance(data, list) else []:
@@ -258,6 +248,36 @@ def _search_nominatim(city, query):
             }
         )
     return results[:20]
+
+
+def _search_nominatim(city, query):
+    q = f"{query}, {city}, Kyrgyzstan" if city else f"{query}, Kyrgyzstan"
+    params = urlencode(
+        {
+            "format": "jsonv2",
+            "addressdetails": "1",
+            "countrycodes": "kg",
+            "limit": "20",
+            "q": q,
+        }
+    )
+    headers = {
+        "Accept": "application/json",
+        "User-Agent": "KyzylKyya-Osh-Connect/1.0 (+https://github.com/shurikabduraupov-commits/kyzylkyya-osh-connect)",
+    }
+    bases = (
+        "https://nominatim.openstreetmap.org/search",
+        "https://nominatim.openstreetmap.de/search",
+    )
+    for base in bases:
+        try:
+            data = _http_get_json(f"{base}?{params}", headers, timeout=10)
+        except (HTTPError, URLError, TimeoutError, socket.timeout, json.JSONDecodeError, OSError):
+            continue
+        parsed = _nominatim_parse_items(data, query, city)
+        if parsed:
+            return parsed
+    return []
 
 
 def search_addresses(city, query):
