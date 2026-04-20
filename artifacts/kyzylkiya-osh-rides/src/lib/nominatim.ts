@@ -387,14 +387,95 @@ function photonCoords(geom: { type?: string; coordinates?: unknown }): [number, 
   return null;
 }
 
-/** Direct Photon from the browser — works when the Render server cannot reach external geocoders. */
+type PhotonRowKind = "street" | "area" | "poi";
+
+function photonRowKind(props: Record<string, unknown>): PhotonRowKind {
+  const key = String(props.osm_key ?? "").toLowerCase();
+  const place = String(props.place ?? props.type ?? "").toLowerCase();
+  if (key === "highway") return "street";
+  if (key === "place") {
+    const areaPlaces = new Set([
+      "neighbourhood",
+      "suburb",
+      "quarter",
+      "village",
+      "hamlet",
+      "locality",
+      "isolated_dwelling",
+    ]);
+    if (areaPlaces.has(place)) return "area";
+  }
+  return "poi";
+}
+
+function buildPhotonSuggestion(
+  props: Record<string, unknown>,
+  city: string,
+  query: string,
+  lon: number,
+  lat: number,
+  kind: PhotonRowKind,
+): NominatimSuggestion | null {
+  const name = String(props.name ?? "").trim();
+  const street = String(props.street ?? "").trim();
+  const housenumber = String(props.housenumber ?? "").trim();
+  const locality = String(
+    props.city ?? props.town ?? props.village ?? props.district ?? props.locality ?? "",
+  ).trim();
+  const country = String(props.country ?? "").trim();
+
+  let line1 = "";
+  if (kind === "street") {
+    line1 = name || street;
+    if (housenumber) line1 = [line1, housenumber].filter(Boolean).join(" ");
+  } else if (kind === "area") {
+    line1 = name;
+  } else {
+    const parts = [street, name].filter(Boolean);
+    line1 = parts.length ? parts.join(" — ") : name || street;
+    if (housenumber) line1 = [line1, housenumber].filter(Boolean).join(" ");
+  }
+
+  if (!line1) return null;
+
+  const display = [line1, locality, country].filter(Boolean).join(", ");
+  const short = [line1, locality || city].filter(Boolean).join(", ");
+
+  const osmId = props.osm_id;
+  const osmType = String(props.osm_type ?? "x");
+  const placeId =
+    typeof osmId === "number" || typeof osmId === "string"
+      ? `photon:${osmType}:${osmId}`
+      : `photon:${globalThis.crypto?.randomUUID?.() ?? String(Math.random())}`;
+
+  const terms = new Set<string>([
+    display.toLowerCase(),
+    short.toLowerCase(),
+    query.toLowerCase(),
+    city.toLowerCase(),
+  ]);
+  if (locality) terms.add(locality.toLowerCase());
+
+  return {
+    placeId,
+    displayName: display,
+    shortLabel: short,
+    category: String(props.osm_key ?? "address"),
+    type: String(props.osm_value ?? props.type ?? ""),
+    lat: String(lat),
+    lon: String(lon),
+    searchTerms: Array.from(terms),
+  };
+}
+
+/** Direct Photon from the browser — streets first; POIs only if almost no streets. */
 async function fetchPhotonBrowser(
   city: string,
   query: string,
   signal?: AbortSignal,
 ): Promise<NominatimSuggestion[]> {
   const q = `${query} ${city}`.trim();
-  const params = new URLSearchParams({ q, limit: "40", lang: "ru" });
+  const params = new URLSearchParams({ q, limit: "50", lang: "ru" });
   let res: Response;
   try {
     res = await fetch(`https://photon.komoot.io/api/?${params}`, { signal });
@@ -411,7 +492,9 @@ async function fetchPhotonBrowser(
   if (!data?.features?.length) return [];
 
   const seen = new Set<string>();
-  const out: NominatimSuggestion[] = [];
+  const streets: NominatimSuggestion[] = [];
+  const areas: NominatimSuggestion[] = [];
+  const pois: NominatimSuggestion[] = [];
 
   for (const feat of data.features) {
     const props = feat.properties ?? {};
@@ -425,52 +508,23 @@ async function fetchPhotonBrowser(
       continue;
     }
 
-    const name = String(props.name ?? "").trim();
-    const street = String(props.street ?? "").trim();
-    const housenumber = String(props.housenumber ?? "").trim();
-    const locality = String(
-      props.city ?? props.town ?? props.village ?? props.district ?? props.locality ?? "",
-    ).trim();
-    const country = String(props.country ?? "").trim();
-    const line1Parts = [street || name, housenumber].filter(Boolean);
-    const line1 = line1Parts.length > 0 ? line1Parts.join(" ") : (name || street);
-    if (!line1) continue;
-
-    const display = [line1, locality, country].filter(Boolean).join(", ");
-    const short = [line1, locality || city].filter(Boolean).join(", ");
-    const key = display.toLowerCase();
+    const kind = photonRowKind(props);
+    const item = buildPhotonSuggestion(props, city, query, lon, lat, kind);
+    if (!item) continue;
+    const key = item.displayName.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
 
-    const osmId = props.osm_id;
-    const osmType = String(props.osm_type ?? "x");
-    const placeId =
-      typeof osmId === "number" || typeof osmId === "string"
-        ? `photon:${osmType}:${osmId}`
-        : `photon:${crypto.randomUUID?.() ?? String(Math.random())}`;
-
-    const terms = new Set<string>([
-      display.toLowerCase(),
-      short.toLowerCase(),
-      query.toLowerCase(),
-      city.toLowerCase(),
-    ]);
-    if (locality) terms.add(locality.toLowerCase());
-
-    out.push({
-      placeId,
-      displayName: display,
-      shortLabel: short,
-      category: String(props.osm_key ?? "address"),
-      type: String(props.osm_value ?? props.type ?? ""),
-      lat: String(lat),
-      lon: String(lon),
-      searchTerms: Array.from(terms),
-    });
-    if (out.length >= 20) break;
+    if (kind === "street") streets.push(item);
+    else if (kind === "area") areas.push(item);
+    else pois.push(item);
   }
 
-  return out;
+  const merged = [...streets, ...areas];
+  if (merged.length < 6) {
+    merged.push(...pois.slice(0, Math.max(0, 12 - merged.length)));
+  }
+  return merged.slice(0, 20);
 }
 
 export async function searchNominatim({

@@ -137,13 +137,81 @@ def _in_kyrgyzstan(lon, lat):
     return 69.0 <= lo <= 80.7 and 39.0 <= la <= 43.4
 
 
+def _photon_row_kind(props):
+    key = str(props.get("osm_key", "")).lower()
+    place = str(props.get("place") or props.get("type") or "").lower()
+    if key == "highway":
+        return "street"
+    if key == "place":
+        area_places = {
+            "neighbourhood",
+            "suburb",
+            "quarter",
+            "village",
+            "hamlet",
+            "locality",
+            "isolated_dwelling",
+        }
+        if place in area_places:
+            return "area"
+    return "poi"
+
+
+def _photon_build_item(props, city, query, lon, lat, kind):
+    name = str(props.get("name") or "").strip()
+    street = str(props.get("street") or "").strip()
+    housenumber = str(props.get("housenumber") or "").strip()
+    locality = str(
+        props.get("city")
+        or props.get("town")
+        or props.get("village")
+        or props.get("district")
+        or props.get("locality")
+        or "",
+    ).strip()
+    country = str(props.get("country") or "").strip()
+
+    if kind == "street":
+        line1 = name or street
+        if housenumber:
+            line1 = f"{line1} {housenumber}".strip()
+    elif kind == "area":
+        line1 = name
+    else:
+        parts = [p for p in [street, name] if p]
+        line1 = " — ".join(parts) if parts else (name or street)
+        if housenumber:
+            line1 = f"{line1} {housenumber}".strip()
+
+    if not line1:
+        return None
+
+    display = ", ".join([p for p in [line1, locality, country] if p])
+    short = ", ".join([p for p in [line1, locality or city] if p])
+    osm_id = props.get("osm_id")
+    place_id = f"photon:{props.get('osm_type', 'x')}:{osm_id}" if osm_id else f"photon:{uuid.uuid4().hex}"
+    terms = {display.lower(), short.lower(), query.lower(), (city or "").lower()}
+    if locality:
+        terms.add(locality.lower())
+    return {
+        "placeId": place_id,
+        "displayName": display,
+        "shortLabel": short,
+        "category": str(props.get("osm_key", "") or "address"),
+        "type": str(props.get("osm_value", "") or props.get("type", "") or ""),
+        "lat": str(lat),
+        "lon": str(lon),
+        "searchTerms": list(terms),
+    }
+
+
 def _search_photon(city, query):
-    """Komoot Photon — works from cloud hosts. Do not pass bbox=… (Photon returns HTTP 400)."""
+    """Komoot Photon — streets first; POIs only if few streets. No bbox= (HTTP 400)."""
     q = f"{query} {city}".strip() if city else query
     params = urlencode(
         {
             "q": q,
-            "limit": "40",
+            "limit": "50",
             "lang": "ru",
         }
     )
@@ -158,7 +226,7 @@ def _search_photon(city, query):
         return []
 
     seen = set()
-    results = []
+    streets, areas, pois = [], [], []
     for feat in data.get("features", []) if isinstance(data, dict) else []:
         props = feat.get("properties") or {}
         geom = feat.get("geometry") or {}
@@ -172,48 +240,25 @@ def _search_photon(city, query):
                 continue
         elif not _in_kyrgyzstan(lon, lat):
             continue
-        name = str(props.get("name") or props.get("street") or "").strip()
-        street = str(props.get("street") or "").strip()
-        housenumber = str(props.get("housenumber") or "").strip()
-        locality = (
-            props.get("city")
-            or props.get("town")
-            or props.get("village")
-            or props.get("district")
-            or props.get("locality")
-            or ""
-        )
-        locality = str(locality).strip()
-        country = str(props.get("country") or "").strip()
-        line1_parts = [p for p in [street or name, housenumber] if p]
-        line1 = " ".join(line1_parts) if line1_parts else (name or street)
-        if not line1:
+        kind = _photon_row_kind(props)
+        item = _photon_build_item(props, city, query, lon, lat, kind)
+        if not item:
             continue
-        display_parts = [p for p in [line1, locality, country] if p]
-        display = ", ".join(display_parts)
-        short = ", ".join([p for p in [line1, locality or city] if p])
-        key = display.lower()
+        key = item["displayName"].lower()
         if key in seen:
             continue
         seen.add(key)
-        osm_id = props.get("osm_id")
-        place_id = f"photon:{props.get('osm_type', 'x')}:{osm_id}" if osm_id else f"photon:{uuid.uuid4().hex}"
-        terms = {display.lower(), short.lower(), query.lower(), (city or "").lower()}
-        if locality:
-            terms.add(locality.lower())
-        results.append(
-            {
-                "placeId": place_id,
-                "displayName": display,
-                "shortLabel": short,
-                "category": str(props.get("osm_key", "") or "address"),
-                "type": str(props.get("osm_value", "") or props.get("type", "") or ""),
-                "lat": str(lat),
-                "lon": str(lon),
-                "searchTerms": list(terms),
-            }
-        )
-    return results[:20]
+        if kind == "street":
+            streets.append(item)
+        elif kind == "area":
+            areas.append(item)
+        else:
+            pois.append(item)
+
+    merged = streets + areas
+    if len(merged) < 6:
+        merged.extend(pois[: max(0, 12 - len(merged))])
+    return merged[:20]
 
 
 def _nominatim_parse_items(data, query, city):
