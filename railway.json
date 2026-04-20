@@ -1,0 +1,18 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "artifacts/kyzylkiya-osh-rides/Dockerfile",
+    "watchPatterns": [
+      "artifacts/kyzylkiya-osh-rides/**",
+      "lib/api-client-react/**",
+      "pnpm-lock.yaml",
+      "pnpm-workspace.yaml",
+      "package.json"
+    ]
+  },
+  "deploy": {
+    "healthcheckPath": "/rides-api/healthz",
+    "healthcheckTimeout": 120
+  }
+}
