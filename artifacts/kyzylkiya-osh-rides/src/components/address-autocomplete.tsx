@@ -20,6 +20,7 @@ export function AddressAutocomplete({ value, onChange, city, placeholder, id }: 
   const [error, setError] = useState<string | null>(null);
   const skipNextSearchRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const searchGenerationRef = useRef(0);
 
   useEffect(() => {
     if (skipNextSearchRef.current) {
@@ -35,10 +36,12 @@ export function AddressAutocomplete({ value, onChange, city, placeholder, id }: 
       return;
     }
 
+    const generation = ++searchGenerationRef.current;
     const controller = new AbortController();
     setLoading(true);
     setError(null);
 
+    const debounceMs = 380;
     const timer = setTimeout(async () => {
       try {
         const results = await searchNominatim({
@@ -46,16 +49,20 @@ export function AddressAutocomplete({ value, onChange, city, placeholder, id }: 
           city,
           signal: controller.signal,
         });
+        if (generation !== searchGenerationRef.current) return;
         setSuggestions(results);
         setOpen(true);
       } catch (err) {
+        if (generation !== searchGenerationRef.current) return;
         if ((err as Error).name === "AbortError") return;
         setError(t("address.error"));
         setOpen(true);
       } finally {
-        setLoading(false);
+        if (generation === searchGenerationRef.current) {
+          setLoading(false);
+        }
       }
-    }, 200);
+    }, debounceMs);
 
     return () => {
       controller.abort();

@@ -527,6 +527,28 @@ async function fetchPhotonBrowser(
   return merged.slice(0, 20);
 }
 
+function cityHasLocalStreetIndex(city: string): boolean {
+  return Object.prototype.hasOwnProperty.call(CITY_COORDS, city);
+}
+
+function matchLocalPlaces(places: NominatimSuggestion[], trimmed: string): NominatimSuggestion[] {
+  if (places.length === 0) return [];
+  const needles = buildHaystacks(trimmed);
+  const matches = places.filter((place) => {
+    const haystacks = [...place.searchTerms, ...buildHaystacks(place.shortLabel)];
+    return needles.some((needle) => haystacks.some((hay) => hay.includes(needle)));
+  });
+  matches.sort((a, b) => {
+    const aHays = [...a.searchTerms, ...buildHaystacks(a.shortLabel)];
+    const bHays = [...b.searchTerms, ...buildHaystacks(b.shortLabel)];
+    const aStarts = aHays.some((h) => needles.some((n) => h.startsWith(n)));
+    const bStarts = bHays.some((h) => needles.some((n) => h.startsWith(n)));
+    if (aStarts !== bStarts) return aStarts ? -1 : 1;
+    return 0;
+  });
+  return matches.slice(0, 20);
+}
+
 export async function searchNominatim({
   query,
   city,
@@ -538,10 +560,6 @@ export async function searchNominatim({
 }): Promise<NominatimSuggestion[]> {
   const trimmed = query.trim();
   if (trimmed.length < 1) return [];
-
-  const fromPhoton = await fetchPhotonBrowser(city, trimmed, signal);
-  if (signal?.aborted) return [];
-  if (fromPhoton.length > 0) return fromPhoton;
 
   const fallbackSearch = async (): Promise<NominatimSuggestion[]> => {
     const params = new URLSearchParams();
@@ -567,6 +585,17 @@ export async function searchNominatim({
       .filter((item) => item.placeId && item.shortLabel);
   };
 
+  if (cityHasLocalStreetIndex(city)) {
+    const places = await getCityPlaces(city);
+    if (signal?.aborted) return [];
+    const local = matchLocalPlaces(places, trimmed);
+    if (local.length > 0) return local;
+  }
+
+  const fromPhoton = await fetchPhotonBrowser(city, trimmed, signal);
+  if (signal?.aborted) return [];
+  if (fromPhoton.length > 0) return fromPhoton;
+
   const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
   if (apiBase) {
     const fromServer = await fallbackSearch();
@@ -574,29 +603,14 @@ export async function searchNominatim({
     if (fromServer.length > 0) return fromServer;
   }
 
-  const places = await getCityPlaces(city);
-  if (signal?.aborted) return [];
-  if (places.length === 0) {
-    return fallbackSearch();
+  if (!cityHasLocalStreetIndex(city)) {
+    const places = await getCityPlaces(city);
+    if (signal?.aborted) return [];
+    if (places.length > 0) {
+      const top = matchLocalPlaces(places, trimmed);
+      if (top.length > 0) return top;
+    }
   }
 
-  const needles = buildHaystacks(trimmed);
-
-  const matches = places.filter((place) => {
-    const haystacks = [...place.searchTerms, ...buildHaystacks(place.shortLabel)];
-    return needles.some((needle) => haystacks.some((hay) => hay.includes(needle)));
-  });
-
-  matches.sort((a, b) => {
-    const aHays = [...a.searchTerms, ...buildHaystacks(a.shortLabel)];
-    const bHays = [...b.searchTerms, ...buildHaystacks(b.shortLabel)];
-    const aStarts = aHays.some((h) => needles.some((n) => h.startsWith(n)));
-    const bStarts = bHays.some((h) => needles.some((n) => h.startsWith(n)));
-    if (aStarts !== bStarts) return aStarts ? -1 : 1;
-    return 0;
-  });
-
-  const top = matches.slice(0, 20);
-  if (top.length > 0) return top;
   return fallbackSearch();
 }
