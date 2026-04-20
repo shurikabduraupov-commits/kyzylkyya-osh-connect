@@ -368,6 +368,111 @@ function buildHaystacks(text: string): string[] {
   return cyr === lat ? [cyr] : [cyr, lat];
 }
 
+function inKyrgyzstan(lon: number, lat: number): boolean {
+  return lon >= 69 && lon <= 80.7 && lat >= 39 && lat <= 43.4;
+}
+
+function photonCoords(geom: { type?: string; coordinates?: unknown }): [number, number] | null {
+  if (!geom?.coordinates) return null;
+  if (geom.type === "Point" && Array.isArray(geom.coordinates) && geom.coordinates.length >= 2) {
+    const [lon, lat] = geom.coordinates as [number, number];
+    if (typeof lon === "number" && typeof lat === "number") return [lon, lat];
+  }
+  if (geom.type === "LineString" && Array.isArray(geom.coordinates) && geom.coordinates.length > 0) {
+    const mid = geom.coordinates[Math.floor(geom.coordinates.length / 2)] as unknown;
+    if (Array.isArray(mid) && mid.length >= 2 && typeof mid[0] === "number" && typeof mid[1] === "number") {
+      return [mid[0], mid[1]];
+    }
+  }
+  return null;
+}
+
+/** Direct Photon from the browser — works when the Render server cannot reach external geocoders. */
+async function fetchPhotonBrowser(
+  city: string,
+  query: string,
+  signal?: AbortSignal,
+): Promise<NominatimSuggestion[]> {
+  const q = `${query} ${city}`.trim();
+  const params = new URLSearchParams({ q, limit: "40", lang: "ru" });
+  let res: Response;
+  try {
+    res = await fetch(`https://photon.komoot.io/api/?${params}`, { signal });
+  } catch {
+    return [];
+  }
+  if (!res.ok) return [];
+  const data = (await res.json().catch(() => null)) as {
+    features?: Array<{
+      geometry?: { type?: string; coordinates?: unknown };
+      properties?: Record<string, unknown>;
+    }>;
+  } | null;
+  if (!data?.features?.length) return [];
+
+  const seen = new Set<string>();
+  const out: NominatimSuggestion[] = [];
+
+  for (const feat of data.features) {
+    const props = feat.properties ?? {};
+    const coords = photonCoords(feat.geometry ?? {});
+    if (!coords) continue;
+    const [lon, lat] = coords;
+    const cc = String(props.countrycode ?? "").toLowerCase();
+    if (cc) {
+      if (cc !== "kg") continue;
+    } else if (!inKyrgyzstan(lon, lat)) {
+      continue;
+    }
+
+    const name = String(props.name ?? "").trim();
+    const street = String(props.street ?? "").trim();
+    const housenumber = String(props.housenumber ?? "").trim();
+    const locality = String(
+      props.city ?? props.town ?? props.village ?? props.district ?? props.locality ?? "",
+    ).trim();
+    const country = String(props.country ?? "").trim();
+    const line1Parts = [street || name, housenumber].filter(Boolean);
+    const line1 = line1Parts.length > 0 ? line1Parts.join(" ") : (name || street);
+    if (!line1) continue;
+
+    const display = [line1, locality, country].filter(Boolean).join(", ");
+    const short = [line1, locality || city].filter(Boolean).join(", ");
+    const key = display.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const osmId = props.osm_id;
+    const osmType = String(props.osm_type ?? "x");
+    const placeId =
+      typeof osmId === "number" || typeof osmId === "string"
+        ? `photon:${osmType}:${osmId}`
+        : `photon:${crypto.randomUUID?.() ?? String(Math.random())}`;
+
+    const terms = new Set<string>([
+      display.toLowerCase(),
+      short.toLowerCase(),
+      query.toLowerCase(),
+      city.toLowerCase(),
+    ]);
+    if (locality) terms.add(locality.toLowerCase());
+
+    out.push({
+      placeId,
+      displayName: display,
+      shortLabel: short,
+      category: String(props.osm_key ?? "address"),
+      type: String(props.osm_value ?? props.type ?? ""),
+      lat: String(lat),
+      lon: String(lon),
+      searchTerms: Array.from(terms),
+    });
+    if (out.length >= 20) break;
+  }
+
+  return out;
+}
+
 export async function searchNominatim({
   query,
   city,
@@ -379,6 +484,10 @@ export async function searchNominatim({
 }): Promise<NominatimSuggestion[]> {
   const trimmed = query.trim();
   if (trimmed.length < 1) return [];
+
+  const fromPhoton = await fetchPhotonBrowser(city, trimmed, signal);
+  if (signal?.aborted) return [];
+  if (fromPhoton.length > 0) return fromPhoton;
 
   const fallbackSearch = async (): Promise<NominatimSuggestion[]> => {
     const params = new URLSearchParams();
