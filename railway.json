@@ -13,5 +13,8 @@
       "pnpm-workspace.yaml",
       "package.json"
     ]
+  },
+  "deploy": {
+    "startCommand": "python server.py"
   }
 }
