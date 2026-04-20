@@ -13,7 +13,8 @@ ENV CI=true
 # Partial monorepo in the image: full --frozen-lockfile fails (lockfile lists all workspace importers).
 RUN pnpm install --no-frozen-lockfile
 ENV NODE_ENV=production
-RUN pnpm --filter @workspace/kyzylkiya-osh-rides run build
+# Railway often sets PORT="" during *build*; Vite config must see a valid port for that step.
+RUN env PORT=5173 NODE_OPTIONS=--max-old-space-size=3072 pnpm --filter @workspace/kyzylkiya-osh-rides run build
 
 FROM python:3.12-slim-bookworm
 WORKDIR /app
