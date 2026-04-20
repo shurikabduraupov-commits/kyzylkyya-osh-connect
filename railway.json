@@ -4,6 +4,9 @@
     "builder": "DOCKERFILE",
     "dockerfilePath": "Dockerfile",
     "watchPatterns": [
+      "Dockerfile",
+      "railway.json",
+      "tsconfig.base.json",
       "artifacts/kyzylkiya-osh-rides/**",
       "lib/api-client-react/**",
       "pnpm-lock.yaml",
