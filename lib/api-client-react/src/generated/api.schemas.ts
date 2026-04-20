@@ -24,6 +24,8 @@ export interface CreateRideRequest {
   destination: string;
   /** @minLength 3 */
   pickupAddress: string;
+  /** @pattern ^\+996\d{9}$ */
+  passengerPhone: string;
   /** @maxLength 500 */
   notes?: string;
   /**
@@ -36,7 +38,10 @@ export interface CreateRideRequest {
 }
 
 export interface ReleaseRideRequest {
-  driverPhone: string;
+  /** Driver releasing their own accepted ride */
+  driverPhone?: string;
+  /** Passenger declining the matched driver */
+  passengerPhone?: string;
 }
 
 export interface AcceptRideRequest {
@@ -77,6 +82,7 @@ export interface RideRequest {
   origin: string;
   destination: string;
   pickupAddress: string;
+  passengerPhone: string;
   notes: string | null;
   seats: number;
   route: string;

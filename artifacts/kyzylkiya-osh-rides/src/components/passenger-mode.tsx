@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -6,8 +6,12 @@ import {
   useCreateRideRequest,
   useGetRideRequest,
   useCancelRideRequest,
+  useReleaseRideRequest,
+  useListRideRequests,
   getGetRideRequestQueryKey,
+  getGetRideStatsQueryKey,
   getListActiveDriversQueryKey,
+  getListRideRequestsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -16,7 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, Users, CheckCircle2, Phone, Search, Car, ArrowRight, Navigation } from "lucide-react";
+import { MapPin, Users, CheckCircle2, Phone, Car, ArrowRight, Loader2, ListChecks, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DEFAULT_DESTINATION, DEFAULT_ORIGIN } from "@/lib/settlements";
 import { useAllSettlements } from "@/lib/all-settlements";
@@ -27,6 +31,13 @@ import { useTranslation } from "@/lib/i18n";
 import { readProfile, updateProfile } from "@/lib/profile";
 import { prefetchCityPlaces } from "@/lib/nominatim";
 import { alertSuccess, alertWarning, ensureNotificationPermission, primeAudio } from "@/lib/alerts";
+import {
+  clearActiveRideRequestId,
+  readActiveRideRequestId,
+  writeActiveRideRequestId,
+} from "@/lib/active-ride-request";
+import { KG_MOBILE_PREFIX, isValidKg996Phone, kg996Suffix } from "@/lib/phone-kg";
+import { apiUrl } from "@/lib/api-url";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -42,10 +53,32 @@ function combineDateTime(day: "today" | "tomorrow", time: string): Date {
   return d;
 }
 
+function formatTimeShort(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function formatDateTimeShort(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString([], {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export function PassengerMode() {
   const { t, lang } = useTranslation();
-  const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
+  const [activeRequestId, setActiveRequestId] = useState<string | null>(() =>
+    typeof window !== "undefined" ? readActiveRideRequestId() : null,
+  );
   const [previousStatus, setPreviousStatus] = useState<string | null>(null);
+  const [ratingValue, setRatingValue] = useState<number>(5);
+  const [isRatingSubmitting, setIsRatingSubmitting] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const settlements = useAllSettlements();
@@ -57,6 +90,9 @@ export function PassengerMode() {
           origin: z.string().min(2, t("passenger.error.origin")),
           destination: z.string().min(2, t("passenger.error.destination")),
           pickupAddress: z.string().min(3, t("passenger.error.address")),
+          passengerPhone: z
+            .string()
+            .refine((v) => isValidKg996Phone(v), { message: t("passenger.error.phone-kg") }),
           notes: z.string().min(1, t("passenger.error.notes-required")).max(500, t("passenger.error.notes")),
           seats: z.coerce.number().min(1).max(7),
           departDay: z.enum(["today", "tomorrow"]),
@@ -119,6 +155,7 @@ export function PassengerMode() {
       origin: initialProfile.lastOrigin || DEFAULT_ORIGIN,
       destination: initialProfile.lastDestination || DEFAULT_DESTINATION,
       pickupAddress: "",
+      passengerPhone: KG_MOBILE_PREFIX,
       notes: "",
       seats: 1,
       departDay: "today",
@@ -146,6 +183,7 @@ export function PassengerMode() {
   const createMutation = useCreateRideRequest({
     mutation: {
       onSuccess: (data) => {
+        writeActiveRideRequestId(data.id);
         setActiveRequestId(data.id);
         primeAudio();
         void ensureNotificationPermission();
@@ -164,28 +202,68 @@ export function PassengerMode() {
     },
   });
 
-  const { data: activeRequest, isPending: isRequestLoading } = useGetRideRequest(
-    activeRequestId || "",
-    {
-      query: {
-        enabled: !!activeRequestId,
-        refetchInterval: (data) => {
-          const s = data?.state?.data?.status;
-          if (s === "active" || s === "accepted") return 3000;
-          return false;
-        },
-        queryKey: getGetRideRequestQueryKey(activeRequestId || ""),
+  const {
+    data: activeRequest,
+    isPending: isRequestLoading,
+    isError: isRideRequestError,
+    error: rideRequestError,
+  } = useGetRideRequest(activeRequestId || "", {
+    query: {
+      enabled: !!activeRequestId,
+      refetchInterval: (data) => {
+        const s = data?.state?.data?.status;
+        if (s === "active" || s === "accepted") return 3000;
+        return false;
       },
+      queryKey: getGetRideRequestQueryKey(activeRequestId || ""),
     },
+  });
+
+  useEffect(() => {
+    if (!activeRequestId || !isRideRequestError) return;
+    const status =
+      typeof rideRequestError === "object" &&
+      rideRequestError !== null &&
+      "status" in rideRequestError &&
+      typeof (rideRequestError as { status?: unknown }).status === "number"
+        ? (rideRequestError as { status: number }).status
+        : null;
+
+    // Only clear the locally stored request id when backend confirms it does not exist.
+    // For transient network/server errors we keep the id and let polling retry.
+    if (status !== 404) return;
+    clearActiveRideRequestId();
+    setActiveRequestId(null);
+    setPreviousStatus(null);
+    toast({
+      title: t("passenger.my-request.error.title"),
+      description: t("passenger.my-request.error.desc"),
+      variant: "destructive",
+    });
+  }, [activeRequestId, isRideRequestError, rideRequestError, toast, t]);
+
+  const bumpRideListsAfterRequestRemoved = useCallback(
+    (requestId: string) => {
+      queryClient.setQueryData(getListRideRequestsQueryKey(), (prev) => {
+        if (!Array.isArray(prev)) return prev;
+        return prev.filter((r) => r.id !== requestId);
+      });
+      void queryClient.invalidateQueries({ queryKey: getListRideRequestsQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: getGetRideStatsQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: getListActiveDriversQueryKey() });
+    },
+    [queryClient],
   );
 
   const cancelMutation = useCancelRideRequest({
     mutation: {
-      onSuccess: () => {
+      onSuccess: (data) => {
+        bumpRideListsAfterRequestRemoved(data.id);
         toast({
           title: t("passenger.cancel.toast.title"),
           description: t("passenger.cancel.toast.desc"),
         });
+        clearActiveRideRequestId();
         setActiveRequestId(null);
         setPreviousStatus(null);
         form.reset();
@@ -193,6 +271,22 @@ export function PassengerMode() {
       onError: () => {
         toast({
           title: t("passenger.cancel.error"),
+          variant: "destructive",
+        });
+      },
+    },
+  });
+
+  const releaseMutation = useReleaseRideRequest({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetRideRequestQueryKey(activeRequestId || "") });
+        queryClient.invalidateQueries({ queryKey: getListActiveDriversQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getListRideRequestsQueryKey() });
+      },
+      onError: () => {
+        toast({
+          title: t("passenger.decline-driver.error"),
           variant: "destructive",
         });
       },
@@ -212,20 +306,22 @@ export function PassengerMode() {
       });
     }
     if (previousStatus === "accepted" && activeRequest.status === "active") {
-      alertWarning(t("passenger.released.toast.title"), t("passenger.released.toast.desc"));
+      alertWarning(t("passenger.back-to-list.title"), t("passenger.back-to-list.desc"));
       toast({
-        title: t("passenger.released.toast.title"),
-        description: t("passenger.released.toast.desc"),
+        title: t("passenger.back-to-list.title"),
+        description: t("passenger.back-to-list.desc"),
       });
       queryClient.invalidateQueries({ queryKey: getListActiveDriversQueryKey() });
     }
     if (activeRequest.status === "cancelled") {
+      bumpRideListsAfterRequestRemoved(activeRequest.id);
+      clearActiveRideRequestId();
       setActiveRequestId(null);
       setPreviousStatus(null);
       return;
     }
     setPreviousStatus(activeRequest.status);
-  }, [activeRequest, previousStatus, toast, t, queryClient]);
+  }, [activeRequest, previousStatus, toast, t, queryClient, bumpRideListsAfterRequestRemoved]);
 
   const handleCancel = () => {
     if (!activeRequestId) return;
@@ -233,10 +329,83 @@ export function PassengerMode() {
     cancelMutation.mutate({ id: activeRequestId });
   };
 
+  const handleDeclineDriver = () => {
+    if (!activeRequestId || !activeRequest || activeRequest.status !== "accepted") return;
+    if (
+      activeRequest.rideProgress === "en_route" ||
+      activeRequest.rideProgress === "arrived" ||
+      activeRequest.rideProgress === "in_trip"
+    ) {
+      toast({
+        title: t("passenger.actions.locked-enroute"),
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!window.confirm(t("passenger.decline-driver.confirm"))) return;
+    releaseMutation.mutate({
+      id: activeRequestId,
+      data: { passengerPhone: activeRequest.passengerPhone },
+    });
+  };
+
+  const handleCancelAcceptedFully = () => {
+    if (!activeRequestId || !activeRequest) return;
+    if (
+      activeRequest.status === "accepted" &&
+      (activeRequest.rideProgress === "en_route" ||
+        activeRequest.rideProgress === "arrived" ||
+        activeRequest.rideProgress === "in_trip")
+    ) {
+      toast({
+        title: t("passenger.actions.locked-enroute"),
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!window.confirm(t("passenger.cancel-accepted.confirm"))) return;
+    cancelMutation.mutate({ id: activeRequestId });
+  };
+
+  const handleSubmitRating = async () => {
+    if (!activeRequestId || !activeRequest) return;
+    setIsRatingSubmitting(true);
+    try {
+      const resp = await fetch(apiUrl(`/rides-api/requests/${activeRequestId}/rate`), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          passengerPhone: activeRequest.passengerPhone,
+          rating: ratingValue,
+        }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err?.message || t("passenger.rating.error"));
+      }
+      toast({
+        title: t("passenger.rating.thanks"),
+      });
+      clearActiveRideRequestId();
+      setActiveRequestId(null);
+      setPreviousStatus(null);
+      form.reset();
+      queryClient.invalidateQueries({ queryKey: getListActiveDriversQueryKey() });
+    } catch (e) {
+      toast({
+        title: e instanceof Error ? e.message : t("passenger.rating.error"),
+        variant: "destructive",
+      });
+    } finally {
+      setIsRatingSubmitting(false);
+    }
+  };
+
   const onSubmit = (data: CreateRideValues) => {
     const { departDay, departAfter, departBefore, ...rest } = data;
     const payload = {
       ...rest,
+      passengerPhone: rest.passengerPhone.trim(),
       notes: rest.notes.trim(),
       departAfter: combineDateTime(departDay, departAfter).toISOString(),
       departBefore: combineDateTime(departDay, departBefore).toISOString(),
@@ -245,141 +414,289 @@ export function PassengerMode() {
     createMutation.mutate({ data: payload });
   };
 
-  const resetRequest = () => {
-    setActiveRequestId(null);
-    form.reset();
-  };
+  const watchOrigin = form.watch("origin");
+  const watchDestination = form.watch("destination");
+  const watchPassengerPhone = form.watch("passengerPhone");
 
-  if (activeRequestId) {
-    if (isRequestLoading) {
-      return <WaitingCard route={form.getValues("origin") + " → " + form.getValues("destination")} />;
-    }
+  const listOrigin = activeRequest?.origin ?? watchOrigin;
+  const listDestination = activeRequest?.destination ?? watchDestination;
+  const historyPhone = activeRequest?.passengerPhone ?? watchPassengerPhone;
+  const canLoadHistory = isValidKg996Phone(historyPhone ?? "");
+  const { data: allRequests = [] } = useListRideRequests({
+    query: {
+      enabled: canLoadHistory,
+      refetchInterval: 10000,
+      queryKey: getListRideRequestsQueryKey(),
+    },
+  });
+  const passengerHistory = allRequests
+    .filter((r) => r.status === "completed" && r.passengerPhone === historyPhone)
+    .slice(0, 20);
 
-    if (activeRequest?.status === "accepted") {
-      return (
-        <Card className="w-full shadow-lg border-primary/20 bg-card overflow-hidden animate-in fade-in slide-in-from-bottom-4">
-          <div className="bg-primary p-6 text-primary-foreground flex flex-col items-center justify-center text-center space-y-3">
-            <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center">
-              <CheckCircle2 className="w-8 h-8 text-white" />
+  return (
+    <div className="space-y-4">
+    {activeRequestId && (
+      <Card className="w-full shadow-md border-primary/25 bg-primary/5 overflow-hidden">
+        <CardHeader className="pb-2">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <CardTitle className="font-display text-lg font-bold text-primary">
+                {t("passenger.my-request.title")}
+              </CardTitle>
+              <CardDescription className="mt-1">{t("passenger.my-request.subtitle")}</CardDescription>
             </div>
-            <div>
-              <h3 className="font-display font-bold text-2xl">{t("passenger.found.title")}</h3>
-              <p className="text-primary-foreground/90 text-sm mt-1">
-                {t("passenger.found.subtitle", { route: activeRequest.route })}
-              </p>
-            </div>
+            {activeRequest && (
+              <span
+                className={`shrink-0 text-xs font-semibold uppercase tracking-wide rounded-full px-2.5 py-1 ${
+                  activeRequest.status === "accepted"
+                    ? "bg-green-600/15 text-green-700 dark:text-green-400"
+                    : "bg-primary/15 text-primary"
+                }`}
+              >
+                {activeRequest.status === "accepted"
+                  ? t("passenger.status.accepted")
+                  : t("passenger.status.listed")}
+              </span>
+            )}
           </div>
-
-          <CardContent className="p-6 space-y-6">
-            <div className="bg-muted/50 rounded-xl p-4 space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <Car className="w-5 h-5 text-primary" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                    {t("passenger.found.driver")}
-                  </p>
-                  <p className="font-semibold text-foreground text-lg truncate">
-                    {activeRequest.driverName}
-                    {activeRequest.driverAge != null && (
-                      <span className="text-sm text-muted-foreground font-normal">
-                        {" "}· {activeRequest.driverAge} {t("passenger.found.age-short")}
-                      </span>
-                    )}
-                  </p>
-                  {activeRequest.driverExperience != null && (
-                    <p className="text-xs text-muted-foreground">
-                      {t("passenger.found.experience", { n: activeRequest.driverExperience })}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {(activeRequest.carMake || activeRequest.carPlate) && (
-                <div className="border-t border-border/60 pt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
-                  {activeRequest.carMake && (
-                    <div className="col-span-2">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                        {t("passenger.found.car")}
-                      </p>
-                      <p className="font-semibold text-foreground">
-                        {activeRequest.carColor && `${activeRequest.carColor} `}
-                        {activeRequest.carMake}
-                        {activeRequest.carYear != null && ` · ${activeRequest.carYear}`}
-                      </p>
-                    </div>
-                  )}
-                  {activeRequest.carPlate && (
-                    <div>
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                        {t("passenger.found.plate")}
-                      </p>
-                      <p className="font-mono font-bold tracking-wider uppercase text-foreground">
-                        {activeRequest.carPlate}
-                      </p>
-                    </div>
-                  )}
-                  {activeRequest.carSeats != null && (
-                    <div>
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                        {t("passenger.found.seats")}
-                      </p>
-                      <p className="font-semibold text-foreground">
-                        {t("passenger.found.seats-value", { n: activeRequest.carSeats })}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
+        </CardHeader>
+        <CardContent className="space-y-4 pt-0">
+          {isRequestLoading && !activeRequest && (
+            <div className="flex items-center gap-3 py-6 text-muted-foreground">
+              <Loader2 className="w-6 h-6 animate-spin shrink-0" />
+              <p className="text-sm">{t("passenger.my-request.loading")}</p>
             </div>
+          )}
 
-            <div className="space-y-3">
-              <Button
-                className="w-full h-14 text-lg font-semibold gap-2 shadow-md hover-elevate-2"
-                size="lg"
-                onClick={() => window.open(`tel:${activeRequest.driverPhone}`, "_blank")}
-              >
-                <Phone className="w-5 h-5" />
-                {t("passenger.found.call", { phone: activeRequest.driverPhone ?? "" })}
-              </Button>
-
-              <Button
-                variant="outline"
-                className="w-full text-muted-foreground"
-                onClick={resetRequest}
-              >
-                {t("passenger.found.search-other")}
-              </Button>
-
+          {activeRequest?.status === "active" && (
+            <>
+              <div className="flex items-center gap-2 text-primary font-semibold text-base">
+                <span>{activeRequest.origin}</span>
+                <ArrowRight className="w-4 h-4 shrink-0" />
+                <span>{activeRequest.destination}</span>
+              </div>
+              <div className="flex items-start gap-2 text-sm">
+                <MapPin className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+                <p className="font-medium leading-snug">{activeRequest.pickupAddress}</p>
+              </div>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1">
+                  <Users className="w-3.5 h-3.5" />
+                  {t("passenger.seats.value", { n: activeRequest.seats })}
+                </span>
+                <span>
+                  {formatTimeShort(activeRequest.departAfter)} – {formatTimeShort(activeRequest.departBefore)}
+                </span>
+              </div>
+              {activeRequest.notes && (
+                <p className="text-xs text-foreground/85 bg-muted/60 rounded-md px-2.5 py-2 leading-snug">
+                  {activeRequest.notes}
+                </p>
+              )}
+              <div className="flex gap-3 rounded-lg border border-border/80 bg-muted/30 px-3 py-3 text-sm text-muted-foreground">
+                <ListChecks className="w-5 h-5 shrink-0 text-primary mt-0.5" aria-hidden />
+                <p className="leading-snug">{t("passenger.my-request.list-hint")}</p>
+              </div>
               <Button
                 variant="ghost"
                 className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
                 onClick={handleCancel}
                 disabled={cancelMutation.isPending}
               >
-                {t("passenger.found.cancel")}
+                {t("passenger.cancel")}
               </Button>
+            </>
+          )}
+
+          {activeRequest?.status === "accepted" && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+              <div className="flex items-center gap-2 text-primary font-semibold">
+                <CheckCircle2 className="w-5 h-5 shrink-0" />
+                <span>{t("passenger.found.title")}</span>
+              </div>
+              <p className="text-sm text-muted-foreground">{t("passenger.found.subtitle", { route: activeRequest.route })}</p>
+              {activeRequest.rideProgress && (
+                <p className="text-lg font-extrabold text-destructive bg-destructive/10 border border-destructive/25 rounded-md px-3 py-2.5">
+                  {activeRequest.rideProgress === "arrived"
+                    ? t("passenger.ride-progress.arrived")
+                    : activeRequest.rideProgress === "in_trip"
+                      ? t("passenger.ride-progress.intrip")
+                    : activeRequest.rideProgress === "en_route"
+                      ? t("passenger.ride-progress.enroute")
+                      : t("passenger.ride-progress.assigned")}
+                </p>
+              )}
+              {(
+                activeRequest.rideProgress === "en_route" ||
+                activeRequest.rideProgress === "arrived" ||
+                activeRequest.rideProgress === "in_trip"
+              ) && (
+                <p className="text-xs text-muted-foreground">{t("passenger.actions.locked-enroute.hint")}</p>
+              )}
+
+              <div className="bg-muted/50 rounded-xl p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <Car className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+                      {t("passenger.found.driver")}
+                    </p>
+                    <p className="font-semibold text-foreground text-lg truncate">
+                      {activeRequest.driverName}
+                      {activeRequest.driverAge != null && (
+                        <span className="text-sm text-muted-foreground font-normal">
+                          {" "}
+                          · {activeRequest.driverAge} {t("passenger.found.age-short")}
+                        </span>
+                      )}
+                    </p>
+                    {activeRequest.driverExperience != null && (
+                      <p className="text-xs text-muted-foreground">
+                        {t("passenger.found.experience", { n: activeRequest.driverExperience })}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {(activeRequest.carMake || activeRequest.carPlate) && (
+                  <div className="border-t border-border/60 pt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+                    {activeRequest.carMake && (
+                      <div className="col-span-2">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                          {t("passenger.found.car")}
+                        </p>
+                        <p className="font-semibold text-foreground">
+                          {activeRequest.carColor && `${activeRequest.carColor} `}
+                          {activeRequest.carMake}
+                          {activeRequest.carYear != null && ` · ${activeRequest.carYear}`}
+                        </p>
+                      </div>
+                    )}
+                    {activeRequest.carPlate && (
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                          {t("passenger.found.plate")}
+                        </p>
+                        <p className="font-mono font-bold tracking-wider uppercase text-foreground">
+                          {activeRequest.carPlate}
+                        </p>
+                      </div>
+                    )}
+                    {activeRequest.carSeats != null && (
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                          {t("passenger.found.seats")}
+                        </p>
+                        <p className="font-semibold text-foreground">
+                          {t("passenger.found.seats-value", { n: activeRequest.carSeats })}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Button
+                  className="w-full h-12 text-base font-semibold gap-2"
+                  size="lg"
+                  onClick={() => window.open(`tel:${activeRequest.driverPhone}`, "_blank")}
+                >
+                  <Phone className="w-5 h-5" />
+                  {t("passenger.found.call", { phone: activeRequest.driverPhone ?? "" })}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleDeclineDriver}
+                  disabled={
+                    releaseMutation.isPending ||
+                    cancelMutation.isPending ||
+                    activeRequest.rideProgress === "en_route" ||
+                    activeRequest.rideProgress === "arrived" ||
+                    activeRequest.rideProgress === "in_trip"
+                  }
+                >
+                  {t("passenger.decline-driver.action")}
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={handleCancelAcceptedFully}
+                  disabled={
+                    cancelMutation.isPending ||
+                    releaseMutation.isPending ||
+                    activeRequest.rideProgress === "en_route" ||
+                    activeRequest.rideProgress === "arrived" ||
+                    activeRequest.rideProgress === "in_trip"
+                  }
+                >
+                  {t("passenger.cancel-accepted.action")}
+                </Button>
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      );
-    }
+          )}
+          {(activeRequest?.status as string) === "completed" && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-primary font-semibold">
+                <CheckCircle2 className="w-5 h-5 shrink-0" />
+                <span>{t("passenger.completed.title")}</span>
+              </div>
+              <p className="text-sm text-muted-foreground">{t("passenger.completed.desc")}</p>
+              {activeRequest.passengerRating != null ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    {t("passenger.rating.saved", { n: activeRequest.passengerRating })}
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      clearActiveRideRequestId();
+                      setActiveRequestId(null);
+                      setPreviousStatus(null);
+                      form.reset();
+                    }}
+                  >
+                    {t("passenger.rating.close")}
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">{t("passenger.rating.prompt")}</p>
+                  <div className="grid grid-cols-5 gap-2">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <Button
+                        key={n}
+                        type="button"
+                        variant={ratingValue === n ? "default" : "outline"}
+                        className="h-11"
+                        onClick={() => setRatingValue(n)}
+                        disabled={isRatingSubmitting}
+                      >
+                        <Star className="w-4 h-4 mr-1.5" />
+                        {n}
+                      </Button>
+                    ))}
+                  </div>
+                  <Button
+                    className="w-full"
+                    onClick={handleSubmitRating}
+                    disabled={isRatingSubmitting}
+                  >
+                    {isRatingSubmitting ? t("passenger.rating.sending") : t("passenger.rating.submit")}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    )}
 
-    return (
-      <WaitingCard
-        route={activeRequest?.route || form.getValues("origin") + " → " + form.getValues("destination")}
-        onCancel={handleCancel}
-        canceling={cancelMutation.isPending}
-      />
-    );
-  }
-
-  const watchOrigin = form.watch("origin");
-  const watchDestination = form.watch("destination");
-
-  return (
-    <div className="space-y-4">
+    {!activeRequestId && (
     <Card className="w-full shadow-sm border-border">
       <CardHeader className="pb-4">
         <CardTitle className="font-display text-2xl font-bold">{t("passenger.title")}</CardTitle>
@@ -489,6 +806,40 @@ export function PassengerMode() {
               )}
             />
 
+            <FormField
+              control={form.control}
+              name="passengerPhone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-foreground">{t("passenger.phone.label")}</FormLabel>
+                  <FormControl>
+                    <div className="flex rounded-md border border-input bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 ring-offset-background">
+                      <span className="flex items-center px-3 text-sm font-semibold text-muted-foreground border-r border-input bg-muted/40 shrink-0 select-none">
+                        {KG_MOBILE_PREFIX}
+                      </span>
+                      <Input
+                        className="h-12 text-base border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                        inputMode="numeric"
+                        autoComplete="tel-national"
+                        placeholder={t("passenger.phone.placeholder-digits")}
+                        maxLength={9}
+                        value={kg996Suffix(field.value)}
+                        onChange={(e) => {
+                          const d = e.target.value.replace(/\D/g, "").slice(0, 9);
+                          field.onChange(`${KG_MOBILE_PREFIX}${d}`);
+                        }}
+                        onBlur={field.onBlur}
+                        name={field.name}
+                        ref={field.ref}
+                      />
+                    </div>
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">{t("passenger.phone.hint-kg")}</p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="space-y-2">
               <p className="text-sm font-medium text-foreground">{t("passenger.depart.label")}</p>
               <FormField
@@ -593,48 +944,41 @@ export function PassengerMode() {
         </Form>
       </CardContent>
     </Card>
-    <ActiveDriversList origin={watchOrigin} destination={watchDestination} />
-    </div>
-  );
-}
+    )}
 
-function WaitingCard({
-  route,
-  onCancel,
-  canceling,
-}: {
-  route: string;
-  onCancel?: () => void;
-  canceling?: boolean;
-}) {
-  const { t } = useTranslation();
-  return (
-    <Card className="w-full shadow-md border-border bg-card overflow-hidden">
-      <CardContent className="p-8 flex flex-col items-center justify-center min-h-[300px] text-center space-y-4">
-        <div className="relative">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
-            <Search className="w-8 h-8 text-primary" />
+    <Card className="w-full shadow-sm border-border">
+      <CardHeader className="pb-3">
+        <CardTitle className="font-display text-xl font-bold">{t("passenger.history.title")}</CardTitle>
+        <CardDescription>{t("passenger.history.subtitle")}</CardDescription>
+      </CardHeader>
+      <CardContent className="pt-0">
+        {!canLoadHistory ? (
+          <p className="text-sm text-muted-foreground py-4 text-center">{t("passenger.history.need-phone")}</p>
+        ) : passengerHistory.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-4 text-center">{t("passenger.history.empty")}</p>
+        ) : (
+          <div className="space-y-2">
+            {passengerHistory.map((ride) => (
+              <div key={ride.id} className="border border-border rounded-xl p-3 bg-card">
+                <p className="font-semibold text-sm flex items-center gap-2">
+                  <span>{ride.origin}</span>
+                  <ArrowRight className="w-3 h-3" />
+                  <span>{ride.destination}</span>
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {formatDateTimeShort((ride as unknown as { completedAt?: string | null }).completedAt ?? ride.createdAt)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {formatTimeShort(ride.departAfter)} - {formatTimeShort(ride.departBefore)} · {t("passenger.seats.value", { n: ride.seats })}
+                </p>
+              </div>
+            ))}
           </div>
-          <div className="absolute top-0 left-0 w-16 h-16 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-        </div>
-        <div className="space-y-2">
-          <h3 className="font-display font-semibold text-xl">{t("passenger.waiting.title")}</h3>
-          <p className="text-foreground font-medium">{route}</p>
-          <p className="text-muted-foreground text-sm max-w-[250px]">
-            {t("passenger.waiting.desc")}
-          </p>
-        </div>
-        {onCancel && (
-          <Button
-            variant="ghost"
-            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-            onClick={onCancel}
-            disabled={canceling}
-          >
-            {t("passenger.cancel")}
-          </Button>
         )}
       </CardContent>
     </Card>
+
+    <ActiveDriversList origin={listOrigin} destination={listDestination} />
+    </div>
   );
 }

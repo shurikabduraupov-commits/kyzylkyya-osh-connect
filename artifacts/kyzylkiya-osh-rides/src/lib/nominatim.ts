@@ -221,19 +221,15 @@ async function fetchCityPlaces(city: string): Promise<NominatimSuggestion[]> {
   const [lon, lat] = coords;
 
   const query = `
-    [out:json][timeout:25];
+    [out:json][timeout:12];
     (
-      way["highway"]["name"](around:10000,${lat},${lon});
-      way["highway"]["name:ru"](around:10000,${lat},${lon});
-      way["highway"]["name:ky"](around:10000,${lat},${lon});
-      way["highway"]["name:en"](around:10000,${lat},${lon});
-      node["place"~"neighbourhood|suburb|quarter|hamlet|village"]["name"](around:10000,${lat},${lon});
-      node["amenity"]["name"](around:8000,${lat},${lon});
-      way["amenity"]["name"](around:8000,${lat},${lon});
-      node["shop"]["name"](around:8000,${lat},${lon});
-      node["tourism"]["name"](around:8000,${lat},${lon});
+      way["highway"]["name"](around:8000,${lat},${lon});
+      way["highway"]["name:ru"](around:8000,${lat},${lon});
+      way["highway"]["name:ky"](around:8000,${lat},${lon});
+      way["highway"]["name:en"](around:8000,${lat},${lon});
+      node["place"~"neighbourhood|suburb|quarter|hamlet|village"]["name"](around:8000,${lat},${lon});
     );
-    out tags center 1200;
+    out tags center 700;
   `;
 
   const endpoints = [
@@ -243,20 +239,31 @@ async function fetchCityPlaces(city: string): Promise<NominatimSuggestion[]> {
     "https://overpass.osm.ch/api/interpreter",
   ];
 
-  let data: OverpassResponse | null = null;
-  for (const url of endpoints) {
+  const timeoutMs = 6500;
+  const requests = endpoints.map(async (url) => {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
     try {
       const response = await fetch(url, {
         method: "POST",
         body: "data=" + encodeURIComponent(query),
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        signal: controller.signal,
       });
-      if (!response.ok) continue;
-      data = (await response.json()) as OverpassResponse;
-      break;
-    } catch {
-      // try next mirror
+      if (!response.ok) {
+        throw new Error(`Overpass mirror failed: ${response.status}`);
+      }
+      return (await response.json()) as OverpassResponse;
+    } finally {
+      window.clearTimeout(timeout);
     }
+  });
+
+  let data: OverpassResponse | null = null;
+  try {
+    data = await Promise.any(requests);
+  } catch {
+    data = null;
   }
 
   if (!data) return [];

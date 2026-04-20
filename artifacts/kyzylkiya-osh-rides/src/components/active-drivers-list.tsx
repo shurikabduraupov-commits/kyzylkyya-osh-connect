@@ -90,12 +90,18 @@ export function ActiveDriversList({ origin, destination }: Props) {
                       <span className="truncate">{d.destination}</span>
                     </p>
                   </div>
-                  {d.kind === "offer" && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide bg-primary/15 text-primary px-1.5 py-0.5 rounded shrink-0">
-                      <Megaphone className="w-3 h-3" />
-                      {t("passenger.drivers.kind.offer")}
-                    </span>
-                  )}
+                  <span
+                    className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0 ${
+                      d.kind === "offer"
+                        ? "bg-primary/15 text-primary"
+                        : "bg-accent text-foreground/80"
+                    }`}
+                  >
+                    <Megaphone className="w-3 h-3" />
+                    {d.kind === "offer"
+                      ? t("passenger.drivers.kind.offer")
+                      : t("passenger.drivers.kind.ride")}
+                  </span>
                 </div>
 
                 {(d.departAfter || d.seats != null) && (

@@ -101,7 +101,7 @@ paths:
     post:
       operationId: releaseRideRequest
       tags: [rides]
-      summary: Driver releases an accepted ride back to the active pool
+      summary: Return accepted ride to the active pool (driver or passenger)
       parameters:
         - name: id
           in: path
@@ -264,6 +264,11 @@ components:
         pickupAddress:
           type: string
           minLength: 3
+        passengerPhone:
+          type: string
+          pattern: "^\\+996\\d{9}$"
+          minLength: 13
+          maxLength: 13
         notes:
           type: string
           maxLength: 500
@@ -281,6 +286,7 @@ components:
         - origin
         - destination
         - pickupAddress
+        - passengerPhone
         - seats
         - departAfter
         - departBefore
@@ -289,8 +295,10 @@ components:
       properties:
         driverPhone:
           type: string
-      required:
-        - driverPhone
+          description: Driver releasing their own accepted ride (must match ride driverPhone)
+        passengerPhone:
+          type: string
+          description: Passenger declining the matched driver (must match ride passengerPhone)
     AcceptRideRequest:
       type: object
       properties:
@@ -345,6 +353,8 @@ components:
         destination:
           type: string
         pickupAddress:
+          type: string
+        passengerPhone:
           type: string
         notes:
           type: string
@@ -404,6 +414,7 @@ components:
         - origin
         - destination
         - pickupAddress
+        - passengerPhone
         - notes
         - seats
         - route

@@ -12,6 +12,7 @@ export interface RideRequest {
   origin: string;
   destination: string;
   pickupAddress: string;
+  passengerPhone: string;
   notes: string | null;
   seats: number;
   route: string;

@@ -13,6 +13,8 @@ export interface CreateRideRequest {
   destination: string;
   /** @minLength 3 */
   pickupAddress: string;
+  /** @minLength 5 */
+  passengerPhone: string;
   /** @maxLength 500 */
   notes?: string;
   /**

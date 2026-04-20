@@ -7,5 +7,6 @@
  */
 
 export interface ReleaseRideRequest {
-  driverPhone: string;
+  driverPhone?: string;
+  passengerPhone?: string;
 }

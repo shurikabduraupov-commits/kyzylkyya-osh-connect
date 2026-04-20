@@ -6,6 +6,7 @@ type RideRequest = {
   origin: string;
   destination: string;
   pickupAddress: string;
+  passengerPhone: string;
   notes: string | null;
   seats: number;
   route: string;
@@ -31,6 +32,7 @@ router.post("/requests", (req, res) => {
   const origin = String(req.body?.origin ?? "").trim();
   const destination = String(req.body?.destination ?? "").trim();
   const pickupAddress = String(req.body?.pickupAddress ?? "").trim();
+  const passengerPhone = String(req.body?.passengerPhone ?? "").trim();
   const notesRaw = String(req.body?.notes ?? "").trim();
   const notes = notesRaw.length === 0 ? null : notesRaw.slice(0, 500);
   const seats = Number(req.body?.seats);
@@ -52,6 +54,10 @@ router.post("/requests", (req, res) => {
 
   if (pickupAddress.length < 3) {
     res.status(400).json({ message: "Так даректи жазыңыз" });
+    return;
+  }
+  if (!/^\+996\d{9}$/.test(passengerPhone)) {
+    res.status(400).json({ message: "Телефон +996 жана андан кийин 9 сан болушу керек" });
     return;
   }
 
@@ -78,6 +84,7 @@ router.post("/requests", (req, res) => {
     origin,
     destination,
     pickupAddress,
+    passengerPhone,
     notes,
     seats,
     route: makeRoute(origin, destination),

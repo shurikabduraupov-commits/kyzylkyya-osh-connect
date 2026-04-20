@@ -1,19 +1,34 @@
-import { useGetRideStats, getGetRideStatsQueryKey } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useGetRideStats,
+  getGetRideStatsQueryKey,
+  getListActiveDriversQueryKey,
+} from "@workspace/api-client-react";
 import { PassengerMode } from "@/components/passenger-mode";
 import { DriverMode } from "@/components/driver-mode";
+import { TelegramAuthGate } from "@/components/telegram-auth-gate";
 import { UserRound, CarFront, Languages } from "lucide-react";
 import { PoppyIcon } from "@/components/poppy-icon";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "@/lib/i18n";
+import { readAuthUser, type AuthUser } from "@/lib/auth";
+import { useState } from "react";
 
 export function Home() {
   const { t, lang, toggle } = useTranslation();
+  const queryClient = useQueryClient();
+  const authEnabled = import.meta.env.VITE_AUTH_ENABLED === "true";
+  const [authUser, setAuthUser] = useState<AuthUser | null>(() => readAuthUser());
   const { data: stats } = useGetRideStats({
     query: {
       refetchInterval: 10000,
       queryKey: getGetRideStatsQueryKey(),
     },
   });
+
+  if (authEnabled && !authUser) {
+    return <TelegramAuthGate onSuccess={setAuthUser} />;
+  }
 
   return (
     <div className="min-h-[100dvh] w-full bg-background flex flex-col">
@@ -91,7 +106,18 @@ export function Home() {
       </header>
 
       <main className="flex-1 max-w-md mx-auto w-full px-4 -mt-4 relative z-20 pb-12">
-        <Tabs defaultValue="passenger" className="w-full">
+        <Tabs
+          defaultValue="passenger"
+          className="w-full"
+          onValueChange={(value) => {
+            if (value === "passenger") {
+              void queryClient.invalidateQueries({
+                queryKey: getListActiveDriversQueryKey(),
+                refetchType: "all",
+              });
+            }
+          }}
+        >
           <TabsList className="grid w-full grid-cols-2 p-1 bg-card border shadow-sm rounded-xl h-14 mb-6">
             <TabsTrigger
               value="passenger"
@@ -109,11 +135,19 @@ export function Home() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="passenger" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+          <TabsContent
+            value="passenger"
+            forceMount
+            className="mt-0 focus-visible:outline-none focus-visible:ring-0 data-[state=inactive]:hidden"
+          >
             <PassengerMode />
           </TabsContent>
 
-          <TabsContent value="driver" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+          <TabsContent
+            value="driver"
+            forceMount
+            className="mt-0 focus-visible:outline-none focus-visible:ring-0 data-[state=inactive]:hidden"
+          >
             <DriverMode />
           </TabsContent>
         </Tabs>

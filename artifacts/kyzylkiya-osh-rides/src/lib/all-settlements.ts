@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { KYRGYZSTAN_SETTLEMENTS } from "@/lib/settlements";
+import { apiUrl } from "@/lib/api-url";
 
 const STORAGE_KEY = "mak.kg.settlements.v2";
 const CUSTOM_KEY = "mak.kg.settlements.custom.v1";
@@ -61,7 +62,7 @@ export async function addCustomSettlement(name: string): Promise<boolean> {
   const token = getAdminToken();
   if (!token) return false;
   try {
-    const res = await fetch("/rides-api/settlements", {
+    const res = await fetch(apiUrl("/rides-api/settlements"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -81,7 +82,7 @@ export async function addCustomSettlement(name: string): Promise<boolean> {
 
 async function fetchCustomFromServer(signal?: AbortSignal): Promise<string[] | null> {
   try {
-    const res = await fetch("/rides-api/settlements", { signal });
+    const res = await fetch(apiUrl("/rides-api/settlements"), { signal });
     if (!res.ok) return null;
     const list = (await res.json()) as string[];
     if (!Array.isArray(list)) return null;

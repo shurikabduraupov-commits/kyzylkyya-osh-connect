@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { setBaseUrl } from "@workspace/api-client-react";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Home } from "@/pages/home";
@@ -41,6 +42,10 @@ function Router() {
 
 function App() {
   useAdminParam();
+  useEffect(() => {
+    const baseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+    setBaseUrl(baseUrl ? baseUrl : null);
+  }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>

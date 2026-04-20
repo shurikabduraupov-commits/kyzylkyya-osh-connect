@@ -23,6 +23,7 @@ export const ListRideRequestsResponseItem = zod.object({
   origin: zod.string(),
   destination: zod.string(),
   pickupAddress: zod.string(),
+  passengerPhone: zod.string(),
   notes: zod.string().nullable(),
   seats: zod.number(),
   route: zod.string(),
@@ -53,6 +54,8 @@ export const createRideRequestBodyDestinationMin = 2;
 
 export const createRideRequestBodyPickupAddressMin = 3;
 
+export const createRideRequestBodyPassengerPhoneMin = 13;
+
 export const createRideRequestBodyNotesMax = 500;
 
 export const createRideRequestBodySeatsMax = 7;
@@ -61,6 +64,11 @@ export const CreateRideRequestBody = zod.object({
   origin: zod.string().min(createRideRequestBodyOriginMin),
   destination: zod.string().min(createRideRequestBodyDestinationMin),
   pickupAddress: zod.string().min(createRideRequestBodyPickupAddressMin),
+  passengerPhone: zod
+    .string()
+    .min(createRideRequestBodyPassengerPhoneMin)
+    .max(13)
+    .regex(/^\+996\d{9}$/),
   notes: zod.string().max(createRideRequestBodyNotesMax).optional(),
   seats: zod.number().min(1).max(createRideRequestBodySeatsMax),
   departAfter: zod.coerce.date(),
@@ -79,6 +87,7 @@ export const GetRideRequestResponse = zod.object({
   origin: zod.string(),
   destination: zod.string(),
   pickupAddress: zod.string(),
+  passengerPhone: zod.string(),
   notes: zod.string().nullable(),
   seats: zod.number(),
   route: zod.string(),
@@ -111,6 +120,7 @@ export const CancelRideRequestResponse = zod.object({
   origin: zod.string(),
   destination: zod.string(),
   pickupAddress: zod.string(),
+  passengerPhone: zod.string(),
   notes: zod.string().nullable(),
   seats: zod.number(),
   route: zod.string(),
@@ -139,7 +149,8 @@ export const ReleaseRideRequestParams = zod.object({
 });
 
 export const ReleaseRideRequestBody = zod.object({
-  driverPhone: zod.string(),
+  driverPhone: zod.string().optional(),
+  passengerPhone: zod.string().optional(),
 });
 
 export const ReleaseRideRequestResponse = zod.object({
@@ -147,6 +158,7 @@ export const ReleaseRideRequestResponse = zod.object({
   origin: zod.string(),
   destination: zod.string(),
   pickupAddress: zod.string(),
+  passengerPhone: zod.string(),
   notes: zod.string().nullable(),
   seats: zod.number(),
   route: zod.string(),
@@ -221,6 +233,7 @@ export const AcceptRideRequestResponse = zod.object({
   origin: zod.string(),
   destination: zod.string(),
   pickupAddress: zod.string(),
+  passengerPhone: zod.string(),
   notes: zod.string().nullable(),
   seats: zod.number(),
   route: zod.string(),
