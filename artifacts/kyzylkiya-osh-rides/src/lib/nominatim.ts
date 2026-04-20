@@ -368,6 +368,17 @@ function buildHaystacks(text: string): string[] {
   return cyr === lat ? [cyr] : [cyr, lat];
 }
 
+function normSearch(s: string): string {
+  return s.normalize("NFC").toLowerCase().trim();
+}
+
+/** Name before ", city" — used for prefix scoring (not the whole shortLabel). */
+function primaryStreetStem(shortLabel: string): string {
+  const i = shortLabel.indexOf(",");
+  const raw = (i === -1 ? shortLabel : shortLabel.slice(0, i)).trim();
+  return normSearch(toCyrillic(raw));
+}
+
 function inKyrgyzstan(lon: number, lat: number): boolean {
   return lon >= 69 && lon <= 80.7 && lat >= 39 && lat <= 43.4;
 }
@@ -533,20 +544,59 @@ function cityHasLocalStreetIndex(city: string): boolean {
 
 function matchLocalPlaces(places: NominatimSuggestion[], trimmed: string): NominatimSuggestion[] {
   if (places.length === 0) return [];
-  const needles = buildHaystacks(trimmed);
-  const matches = places.filter((place) => {
-    const haystacks = [...place.searchTerms, ...buildHaystacks(place.shortLabel)];
-    return needles.some((needle) => haystacks.some((hay) => hay.includes(needle)));
-  });
+  const needles = buildHaystacks(trimmed).map(normSearch).filter((n) => n.length > 0);
+  if (needles.length === 0) return [];
+
+  const hayFor = (place: NominatimSuggestion): string[] => {
+    const stem = primaryStreetStem(place.shortLabel);
+    const set = new Set<string>([
+      stem,
+      ...place.searchTerms.map(normSearch),
+      ...buildHaystacks(place.shortLabel).map(normSearch),
+    ]);
+    return [...set];
+  };
+
+  const matches = places.filter((place) =>
+    needles.some((needle) => hayFor(place).some((hay) => hay.includes(needle))),
+  );
+
+  const rank = (place: NominatimSuggestion): [number, number, number] => {
+    const stem = primaryStreetStem(place.shortLabel);
+    let tier = 9;
+    let pos = 999;
+    for (const n of needles) {
+      if (stem.startsWith(n)) {
+        tier = Math.min(tier, 0);
+        pos = Math.min(pos, 0);
+        continue;
+      }
+      for (const w of stem.split(/[\s./\-«»()]+/).filter(Boolean)) {
+        if (w.startsWith(n)) {
+          tier = Math.min(tier, 1);
+          pos = Math.min(pos, 1);
+        }
+      }
+      const ix = stem.indexOf(n);
+      if (ix >= 0) {
+        tier = Math.min(tier, 2);
+        pos = Math.min(pos, ix);
+      }
+    }
+    return [tier, pos, stem.length];
+  };
+
   matches.sort((a, b) => {
-    const aHays = [...a.searchTerms, ...buildHaystacks(a.shortLabel)];
-    const bHays = [...b.searchTerms, ...buildHaystacks(b.shortLabel)];
-    const aStarts = aHays.some((h) => needles.some((n) => h.startsWith(n)));
-    const bStarts = bHays.some((h) => needles.some((n) => h.startsWith(n)));
-    if (aStarts !== bStarts) return aStarts ? -1 : 1;
-    return 0;
+    const [ta, pa, la] = rank(a);
+    const [tb, pb, lb] = rank(b);
+    if (ta !== tb) return ta - tb;
+    if (pa !== pb) return pa - pb;
+    if (la !== lb) return la - lb;
+    return a.shortLabel.localeCompare(b.shortLabel, "ru");
   });
-  return matches.slice(0, 20);
+
+  const limit = trimmed.trim().length <= 4 ? 40 : 20;
+  return matches.slice(0, limit);
 }
 
 export async function searchNominatim({
