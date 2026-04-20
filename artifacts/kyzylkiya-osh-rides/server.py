@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from urllib.parse import urlparse, parse_qs, urlencode
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
+import socket
 import json
 import re
 import os
@@ -122,11 +123,90 @@ def verify_telegram_widget_auth(payload):
     return hmac.compare_digest(calc_hash, incoming_hash)
 
 
-def search_addresses(city, query):
-    query = str(query or "").strip()
-    city = str(city or "").strip()
-    if len(query) < 1:
+def _http_get_json(url, headers, timeout=12):
+    request = Request(url, headers=headers)
+    with urlopen(request, timeout=timeout) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def _search_photon(city, query):
+    """Komoot Photon — usually works from cloud hosts; bbox limits to Kyrgyzstan."""
+    q = f"{query} {city}".strip() if city else query
+    params = urlencode(
+        {
+            "q": q,
+            "limit": "25",
+            "lang": "ru",
+            "bbox": "69.1,39.0,80.5,43.5",
+        }
+    )
+    url = f"https://photon.komoot.io/api/?{params}"
+    headers = {
+        "Accept": "application/json",
+        "User-Agent": "KyzylKyya-Osh-Connect/1.0 (+https://github.com/shurikabduraupov-commits/kyzylkyya-osh-connect)",
+    }
+    try:
+        data = _http_get_json(url, headers)
+    except (HTTPError, URLError, TimeoutError, socket.timeout, json.JSONDecodeError, OSError):
         return []
+
+    seen = set()
+    results = []
+    for feat in data.get("features", []) if isinstance(data, dict) else []:
+        props = feat.get("properties") or {}
+        geom = feat.get("geometry") or {}
+        coords = geom.get("coordinates") or []
+        if len(coords) < 2:
+            continue
+        lon, lat = coords[0], coords[1]
+        cc = str(props.get("countrycode", "")).lower()
+        if cc and cc != "kg":
+            continue
+        name = str(props.get("name") or props.get("street") or "").strip()
+        street = str(props.get("street") or "").strip()
+        housenumber = str(props.get("housenumber") or "").strip()
+        locality = (
+            props.get("city")
+            or props.get("town")
+            or props.get("village")
+            or props.get("district")
+            or props.get("locality")
+            or ""
+        )
+        locality = str(locality).strip()
+        country = str(props.get("country") or "").strip()
+        line1_parts = [p for p in [street or name, housenumber] if p]
+        line1 = " ".join(line1_parts) if line1_parts else (name or street)
+        if not line1:
+            continue
+        display_parts = [p for p in [line1, locality, country] if p]
+        display = ", ".join(display_parts)
+        short = ", ".join([p for p in [line1, locality or city] if p])
+        key = display.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        osm_id = props.get("osm_id")
+        place_id = f"photon:{props.get('osm_type', 'x')}:{osm_id}" if osm_id else f"photon:{uuid.uuid4().hex}"
+        terms = {display.lower(), short.lower(), query.lower(), (city or "").lower()}
+        if locality:
+            terms.add(locality.lower())
+        results.append(
+            {
+                "placeId": place_id,
+                "displayName": display,
+                "shortLabel": short,
+                "category": str(props.get("osm_key", "") or "address"),
+                "type": str(props.get("osm_value", "") or props.get("type", "") or ""),
+                "lat": str(lat),
+                "lon": str(lon),
+                "searchTerms": list(terms),
+            }
+        )
+    return results[:20]
+
+
+def _search_nominatim(city, query):
     q = f"{query}, {city}, Kyrgyzstan" if city else f"{query}, Kyrgyzstan"
     params = urlencode(
         {
@@ -138,17 +218,13 @@ def search_addresses(city, query):
         }
     )
     url = f"https://nominatim.openstreetmap.org/search?{params}"
-    request = Request(
-        url,
-        headers={
-            "User-Agent": "mak-kg-rides/1.0",
-            "Accept": "application/json",
-        },
-    )
+    headers = {
+        "Accept": "application/json",
+        "User-Agent": "KyzylKyya-Osh-Connect/1.0 (+https://github.com/shurikabduraupov-commits/kyzylkyya-osh-connect)",
+    }
     try:
-        with urlopen(request, timeout=8) as response:
-            data = json.loads(response.read().decode("utf-8"))
-    except (HTTPError, URLError, TimeoutError, json.JSONDecodeError):
+        data = _http_get_json(url, headers, timeout=10)
+    except (HTTPError, URLError, TimeoutError, socket.timeout, json.JSONDecodeError, OSError):
         return []
 
     seen = set()
@@ -168,7 +244,7 @@ def search_addresses(city, query):
         lon = str(item.get("lon", ""))
         category = str(item.get("class", "") or "address")
         item_type = str(item.get("type", "") or "")
-        terms = list({display.lower(), short.lower(), query.lower(), city.lower()})
+        terms = list({display.lower(), short.lower(), query.lower(), (city or "").lower()})
         results.append(
             {
                 "placeId": place_id,
@@ -182,6 +258,17 @@ def search_addresses(city, query):
             }
         )
     return results[:20]
+
+
+def search_addresses(city, query):
+    query = str(query or "").strip()
+    city = str(city or "").strip()
+    if len(query) < 1:
+        return []
+    merged = _search_photon(city, query)
+    if not merged:
+        merged = _search_nominatim(city, query)
+    return merged
 
 
 class RideHandler(BaseHTTPRequestHandler):

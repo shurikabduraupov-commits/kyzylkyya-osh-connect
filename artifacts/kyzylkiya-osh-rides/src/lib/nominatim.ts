@@ -404,6 +404,13 @@ export async function searchNominatim({
       .filter((item) => item.placeId && item.shortLabel);
   };
 
+  const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+  if (apiBase) {
+    const fromServer = await fallbackSearch();
+    if (signal?.aborted) return [];
+    if (fromServer.length > 0) return fromServer;
+  }
+
   const places = await getCityPlaces(city);
   if (signal?.aborted) return [];
   if (places.length === 0) {
