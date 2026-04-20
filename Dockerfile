@@ -1,6 +1,6 @@
-# Single service: Vite build (dist) + Python API on PORT.
-# Build from monorepo root (folder that contains artifacts/ and lib/):
-#   docker build -f artifacts/kyzylkiya-osh-rides/Dockerfile -t kyzyl-rides .
+# Site + API in one image. Build context MUST be the monorepo root (pnpm-lock.yaml here).
+# Local:  docker build -t kyzyl-rides .
+# Railway: Settings → Source → Root directory = empty (NOT artifacts/...).
 
 FROM node:22-bookworm-slim AS frontend
 RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
