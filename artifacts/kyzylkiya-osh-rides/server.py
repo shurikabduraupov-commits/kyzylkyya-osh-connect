@@ -1,8 +1,10 @@
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from datetime import datetime, timezone
+from pathlib import Path
 from urllib.parse import urlparse, parse_qs, urlencode
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
+import mimetypes
 import socket
 import json
 import re
@@ -10,6 +12,13 @@ import os
 import uuid
 import hashlib
 import hmac
+
+_STATIC_ROOT = Path(
+    os.environ.get(
+        "STATIC_DIST_DIR",
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "dist"),
+    )
+).resolve()
 
 requests_store = []
 offers_store = []
@@ -340,6 +349,65 @@ class RideHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         return
 
+    def _send_static_file(self, file_path: Path, status: int = 200):
+        data = file_path.read_bytes()
+        ctype, _enc = mimetypes.guess_type(str(file_path))
+        if not ctype:
+            ctype = "application/octet-stream"
+        charset = "; charset=utf-8" if ctype.startswith("text/") else ""
+        self.send_response(status)
+        self.send_header("Content-Type", f"{ctype}{charset}")
+        if file_path.name == "index.html":
+            self.send_header("Cache-Control", "no-cache")
+        else:
+            self.send_header("Cache-Control", "public, max-age=31536000, immutable")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def _try_serve_static(self, req_path: str) -> None:
+        if not _STATIC_ROOT.is_dir():
+            msg = (
+                'Сайттын файлдары табылган жок. Алдын ала "pnpm run build" '
+                "жасап, dist папкасын түзүңүз."
+            ).encode("utf-8")
+            self.send_response(503)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Content-Length", str(len(msg)))
+            self.end_headers()
+            self.wfile.write(msg)
+            return
+
+        rel = (req_path or "/").strip("/")
+        if not rel:
+            candidate = (_STATIC_ROOT / "index.html").resolve()
+        else:
+            candidate = (_STATIC_ROOT / rel).resolve()
+        try:
+            candidate.relative_to(_STATIC_ROOT)
+        except ValueError:
+            self.send_response(403)
+            self.end_headers()
+            return
+
+        if candidate.is_file():
+            self._send_static_file(candidate)
+            return
+
+        last = Path(rel).name
+        if "." in last and not last.endswith(".html"):
+            self.send_response(404)
+            self.end_headers()
+            return
+
+        index_html = (_STATIC_ROOT / "index.html").resolve()
+        if index_html.is_file():
+            self._send_static_file(index_html)
+            return
+
+        self.send_response(404)
+        self.end_headers()
+
     def _send_json(self, status, payload):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
@@ -369,6 +437,11 @@ class RideHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urlparse(self.path)
+        req_path = parsed.path or "/"
+        if not req_path.startswith("/rides-api"):
+            self._try_serve_static(req_path)
+            return
+
         query_params = parse_qs(parsed.query)
         parts = self._path_parts()
         if parts == ["healthz"]:
@@ -499,6 +572,11 @@ class RideHandler(BaseHTTPRequestHandler):
         self._send_json(404, {"message": "Маршрут табылган жок"})
 
     def do_POST(self):
+        req_path = urlparse(self.path).path or "/"
+        if not req_path.startswith("/rides-api"):
+            self.send_response(404)
+            self.end_headers()
+            return
         parts = self._path_parts()
         try:
             data = self._read_json()
