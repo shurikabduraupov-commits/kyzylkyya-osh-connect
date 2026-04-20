@@ -10,9 +10,5 @@
       "pnpm-workspace.yaml",
       "package.json"
     ]
-  },
-  "deploy": {
-    "healthcheckPath": "/rides-api/healthz",
-    "healthcheckTimeout": 120
   }
 }

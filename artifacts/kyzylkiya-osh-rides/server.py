@@ -1120,5 +1120,6 @@ class RideHandler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "24615"))
+    print(f"rides-server: listening on 0.0.0.0:{port}", flush=True)
     server = ThreadingHTTPServer(("0.0.0.0", port), RideHandler)
     server.serve_forever()
