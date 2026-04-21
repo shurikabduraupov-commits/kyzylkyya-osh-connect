@@ -63,3 +63,7 @@ Thumbs.db
 # Telegram login registry (server-generated)
 artifacts/kyzylkiya-osh-rides/telegram_users.json
 artifacts/kyzylkiya-osh-rides/telegram_users.json.tmp
+artifacts/kyzylkiya-osh-rides/auth_sessions.json
+artifacts/kyzylkiya-osh-rides/auth_sessions.json.tmp
+artifacts/kyzylkiya-osh-rides/phone_users.json
+artifacts/kyzylkiya-osh-rides/phone_users.json.tmp

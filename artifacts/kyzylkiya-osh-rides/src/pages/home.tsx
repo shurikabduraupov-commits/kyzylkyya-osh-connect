@@ -6,7 +6,7 @@ import {
 } from "@workspace/api-client-react";
 import { PassengerMode } from "@/components/passenger-mode";
 import { DriverMode } from "@/components/driver-mode";
-import { TelegramAuthGate } from "@/components/telegram-auth-gate";
+import { PhoneAuthGate } from "@/components/phone-auth-gate";
 import { UserRound, CarFront, Languages, Send, Loader2 } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -62,7 +62,7 @@ export function Home() {
     },
   });
 
-  const showTelegramGate = !authUser && (viteAuthGate || serverAuthRequired === true);
+  const showAuthGate = !authUser && (viteAuthGate || serverAuthRequired === true);
   const waitingAuthSettings = !viteAuthGate && serverAuthRequired === null;
 
   if (waitingAuthSettings) {
@@ -74,8 +74,8 @@ export function Home() {
     );
   }
 
-  if (showTelegramGate) {
-    return <TelegramAuthGate onSuccess={setAuthUser} />;
+  if (showAuthGate) {
+    return <PhoneAuthGate onSuccess={setAuthUser} />;
   }
 
   return (

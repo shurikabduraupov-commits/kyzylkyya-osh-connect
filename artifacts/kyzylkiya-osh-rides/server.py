@@ -24,6 +24,11 @@ _STATIC_ROOT = Path(
 requests_store = []
 offers_store = []
 auth_sessions = {}
+phone_users = {}
+
+DATA_DIR = os.path.dirname(os.path.abspath(__file__))
+AUTH_SESSIONS_FILE = os.environ.get("AUTH_SESSIONS_FILE", "").strip() or os.path.join(DATA_DIR, "auth_sessions.json")
+PHONE_USERS_FILE = os.environ.get("PHONE_USERS_FILE", "").strip() or os.path.join(DATA_DIR, "phone_users.json")
 
 SETTLEMENTS_FILE = os.path.join(os.path.dirname(__file__), "custom_settlements.json")
 ADMIN_TOKEN = os.environ.get("MAK_ADMIN_TOKEN", "mak-admin-2026")
@@ -38,6 +43,92 @@ _telegram_registry_lock = threading.Lock()
 
 def _env_truthy(name):
     return os.environ.get(name, "").strip().lower() in ("1", "true", "yes", "on")
+
+
+def _load_json_dict(path):
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+        return data if isinstance(data, dict) else {}
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return {}
+
+
+def _save_json_dict(path, payload):
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(payload, fh, ensure_ascii=False, indent=2)
+    os.replace(tmp, path)
+
+
+def persist_auth_state():
+    try:
+        _save_json_dict(AUTH_SESSIONS_FILE, auth_sessions)
+    except OSError:
+        pass
+    try:
+        _save_json_dict(PHONE_USERS_FILE, phone_users)
+    except OSError:
+        pass
+
+
+def restore_auth_state():
+    global auth_sessions, phone_users
+    auth_sessions = _load_json_dict(AUTH_SESSIONS_FILE)
+    phone_users = _load_json_dict(PHONE_USERS_FILE)
+
+
+def _auth_public_user(session):
+    return {
+        "id": session.get("id", ""),
+        "name": session.get("name", ""),
+        "phone": session.get("phone", ""),
+        "telegramUserId": session.get("telegramUserId", ""),
+        "telegramChatId": session.get("telegramChatId", ""),
+        "username": session.get("username", ""),
+        "photoUrl": session.get("photoUrl", ""),
+    }
+
+
+def issue_session(user_record):
+    token = uuid.uuid4().hex
+    session = {
+        "id": str(user_record.get("id", "")).strip() or uuid.uuid4().hex,
+        "name": str(user_record.get("name", "")).strip(),
+        "phone": str(user_record.get("phone", "")).strip(),
+        "telegramUserId": str(user_record.get("telegramUserId", "")).strip(),
+        "telegramChatId": str(user_record.get("telegramChatId", "")).strip(),
+        "username": str(user_record.get("username", "")).strip(),
+        "photoUrl": str(user_record.get("photoUrl", "")).strip(),
+        "createdAt": now_iso(),
+    }
+    auth_sessions[token] = session
+    persist_auth_state()
+    return token, session
+
+
+def upsert_phone_user(name, phone):
+    existing = phone_users.get(phone)
+    now = now_iso()
+    if isinstance(existing, dict):
+        existing["name"] = name
+        existing["lastLoginAt"] = now
+        user = existing
+    else:
+        user = {
+            "id": uuid.uuid4().hex,
+            "name": name,
+            "phone": phone,
+            "telegramUserId": "",
+            "telegramChatId": "",
+            "username": "",
+            "photoUrl": "",
+            "firstLoginAt": now,
+            "lastLoginAt": now,
+        }
+    phone_users[phone] = user
+    persist_auth_state()
+    return user
 
 
 def _load_custom_settlements():
@@ -184,6 +275,9 @@ def register_telegram_user_login(session_record):
             _telegram_registry_save(reg)
         except OSError:
             pass
+
+
+restore_auth_state()
 
 
 def _http_get_json(url, headers, timeout=12):
@@ -523,6 +617,19 @@ class RideHandler(BaseHTTPRequestHandler):
             path = path[len("/rides-api"):]
         return [part for part in path.split("/") if part]
 
+    def _read_bearer_token(self):
+        auth = self.headers.get("Authorization", "")
+        if auth.lower().startswith("bearer "):
+            return auth[7:].strip()
+        return ""
+
+    def _current_session_user(self):
+        token = self._read_bearer_token()
+        if not token:
+            return None
+        session = auth_sessions.get(token)
+        return session if isinstance(session, dict) else None
+
     def do_OPTIONS(self):
         self._send_json(200, {"ok": True})
 
@@ -628,25 +735,11 @@ class RideHandler(BaseHTTPRequestHandler):
             })
             return
         if parts == ["auth", "me"]:
-            auth = self.headers.get("Authorization", "")
-            token = ""
-            if auth.lower().startswith("bearer "):
-                token = auth[7:].strip()
-            session = auth_sessions.get(token)
+            session = self._current_session_user()
             if not session:
                 self._send_json(401, {"message": "Сессия табылган жок"})
                 return
-            self._send_json(
-                200,
-                {
-                    "id": session["id"],
-                    "name": session["name"],
-                    "telegramUserId": session["telegramUserId"],
-                    "telegramChatId": session.get("telegramChatId", ""),
-                    "username": session.get("username", ""),
-                    "photoUrl": session.get("photoUrl", ""),
-                },
-            )
+            self._send_json(200, _auth_public_user(session))
             return
         if parts == ["auth", "settings"]:
             bot_user = TELEGRAM_BOT_USERNAME.lstrip("@").strip()
@@ -658,6 +751,15 @@ class RideHandler(BaseHTTPRequestHandler):
                     "botUsername": bot_user,
                     "openBotUrl": open_bot,
                     "telegramLoginConfigured": bool(TELEGRAM_BOT_TOKEN and bot_user),
+                },
+            )
+            return
+        if parts == ["auth", "phone", "config"]:
+            self._send_json(
+                200,
+                {
+                    "required": _env_truthy("AUTH_REQUIRED"),
+                    "phoneMask": "+996XXXXXXXXX",
                 },
             )
             return
@@ -692,7 +794,23 @@ class RideHandler(BaseHTTPRequestHandler):
         except json.JSONDecodeError:
             self._send_json(400, {"message": "JSON туура эмес"})
             return
+        if parts == ["auth", "phone", "register"]:
+            name = str(data.get("name", "")).strip()
+            phone = str(data.get("phone", "")).strip()
+            if len(name) < 2:
+                self._send_json(400, {"message": "Атыңызды жазыңыз"})
+                return
+            if not re.fullmatch(r"\+996\d{9}", phone):
+                self._send_json(400, {"message": "Телефон +996 менен андан кийин 9 сан болушу керек"})
+                return
+            user = upsert_phone_user(name, phone)
+            token, session = issue_session(user)
+            self._send_json(200, {"token": token, "user": _auth_public_user(session)})
+            return
         if parts == ["requests"]:
+            if _env_truthy("AUTH_REQUIRED") and not self._current_session_user():
+                self._send_json(401, {"message": "Авторизация талап кылынат"})
+                return
             origin = str(data.get("origin", "")).strip()
             destination = str(data.get("destination", "")).strip()
             pickup_address = str(data.get("pickupAddress", "")).strip()
@@ -808,18 +926,14 @@ class RideHandler(BaseHTTPRequestHandler):
                 "createdAt": now_iso(),
             }
             auth_sessions[session_token] = session
+            persist_auth_state()
             register_telegram_user_login(session)
-            public_user = {
-                "id": session["id"],
-                "name": session["name"],
-                "telegramUserId": session["telegramUserId"],
-                "telegramChatId": session.get("telegramChatId", ""),
-                "username": session.get("username", ""),
-                "photoUrl": session.get("photoUrl", ""),
-            }
-            self._send_json(200, {"token": session_token, "user": public_user})
+            self._send_json(200, {"token": session_token, "user": _auth_public_user(session)})
             return
         if parts == ["offers"]:
+            if _env_truthy("AUTH_REQUIRED") and not self._current_session_user():
+                self._send_json(401, {"message": "Авторизация талап кылынат"})
+                return
             origin = str(data.get("origin", "")).strip()
             destination = str(data.get("destination", "")).strip()
             notes = str(data.get("notes", "")).strip()

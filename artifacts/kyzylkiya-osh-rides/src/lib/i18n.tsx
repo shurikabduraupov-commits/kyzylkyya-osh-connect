@@ -25,6 +25,15 @@ const translations: Record<Language, Dict> = {
     "auth.telegram.menuButtonHint":
       "Эгер колдонуучу алгач Telegramден кирсин десеңиз: @BotFather → Bot Settings → Menu Button → сайттын дарегин көрсөтүңүз (мисалы, https://…railway.app).",
     "auth.settings.loading": "Жүктөлүүдө…",
+    "auth.phone.title": "Кирүү / катталуу",
+    "auth.phone.lead": "Биринчи жолу атыңызды жана телефонуңузду жазыңыз. Кийинки кирүүлөрдө кайра катталуунун кереги жок.",
+    "auth.phone.name": "Атыңыз",
+    "auth.phone.name.placeholder": "Мисалы: Нурбек",
+    "auth.phone.phone": "Телефон",
+    "auth.phone.hint": "Формат: +996 жана андан кийин 9 сан.",
+    "auth.phone.submit": "Кирүү",
+    "auth.phone.submitting": "Текшерүү…",
+    "auth.phone.error": "Телефон аркылуу кирүү мүмкүн болгон жок",
 
     "header.brand": "Ала Кет",
     "header.link.telegram": "Telegram бот",
@@ -303,6 +312,15 @@ const translations: Record<Language, Dict> = {
     "auth.telegram.menuButtonHint":
       "Чтобы человек сначала заходил в Telegram: в @BotFather → Bot Settings → Menu Button → укажите адрес вашего сайта (например https://…railway.app).",
     "auth.settings.loading": "Загрузка…",
+    "auth.phone.title": "Вход и регистрация",
+    "auth.phone.lead": "Первый раз укажите имя и телефон. Далее вы входите автоматически и не регистрируетесь заново.",
+    "auth.phone.name": "Ваше имя",
+    "auth.phone.name.placeholder": "Например: Нурбек",
+    "auth.phone.phone": "Телефон",
+    "auth.phone.hint": "Формат: +996 и далее 9 цифр.",
+    "auth.phone.submit": "Войти",
+    "auth.phone.submitting": "Проверяем…",
+    "auth.phone.error": "Не удалось войти по номеру телефона",
 
     "header.brand": "Ала Кет",
     "header.link.telegram": "Бот в Telegram",

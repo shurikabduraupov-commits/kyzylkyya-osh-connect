@@ -3,6 +3,7 @@ import { apiUrl } from "@/lib/api-url";
 export type AuthUser = {
   id: string;
   name: string;
+  phone?: string;
   telegramUserId: string;
   telegramChatId: string;
   username?: string;
@@ -91,5 +92,21 @@ export async function validateAuth(): Promise<AuthUser | null> {
     headers: { ...authHeaders() },
   });
   if (!resp.ok) return null;
+  return await resp.json();
+}
+
+export async function registerPhoneAuth(payload: {
+  name: string;
+  phone: string;
+}): Promise<{ token: string; user: AuthUser }> {
+  const resp = await fetch(apiUrl("/rides-api/auth/phone/register"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err?.message || "Не удалось зарегистрироваться по номеру телефона");
+  }
   return await resp.json();
 }
