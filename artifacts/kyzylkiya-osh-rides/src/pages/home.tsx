@@ -8,7 +8,7 @@ import { PassengerMode } from "@/components/passenger-mode";
 import { DriverMode } from "@/components/driver-mode";
 import { TelegramAuthGate } from "@/components/telegram-auth-gate";
 import { UserRound, CarFront, Languages } from "lucide-react";
-import { PoppyIcon } from "@/components/poppy-icon";
+import { BrandMark } from "@/components/brand-mark";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "@/lib/i18n";
 import { readAuthUser, type AuthUser } from "@/lib/auth";
@@ -40,24 +40,13 @@ export function Home() {
         <div className="max-w-md mx-auto relative z-10">
           <div className="flex items-center justify-between mb-6 gap-3">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="bg-white p-1.5 rounded-xl shadow-sm shrink-0">
-                <PoppyIcon className="w-7 h-7 text-primary" />
+              <div className="bg-white p-2 rounded-xl shadow-sm shrink-0">
+                <BrandMark />
               </div>
               <div className="min-w-0">
-                <h1 className="font-display text-2xl font-bold tracking-tight leading-none">
+                <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight leading-tight">
                   {t("header.brand")}
                 </h1>
-                <p className="text-xs tracking-wide opacity-90 leading-tight">
-                  {t("header.brand.full")
-                    .split(" ")
-                    .map((word, i, arr) => (
-                      <span key={i}>
-                        <span className="font-extrabold text-sm">{word.charAt(0)}</span>
-                        <span className="font-medium">{word.slice(1)}</span>
-                        {i < arr.length - 1 && " "}
-                      </span>
-                    ))}
-                </p>
               </div>
             </div>
 
@@ -77,10 +66,10 @@ export function Home() {
                 type="button"
                 onClick={toggle}
                 aria-label={t("lang.toggle.aria")}
-                className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 active:bg-white/30 transition-colors backdrop-blur-sm rounded-full px-3 py-1.5 text-xs font-bold tracking-wider"
+                className="flex items-center gap-2 bg-white/15 hover:bg-white/25 active:bg-white/30 transition-colors backdrop-blur-sm rounded-full px-4 py-2.5 text-sm font-bold tracking-wider"
                 data-testid="language-toggle"
               >
-                <Languages className="w-3.5 h-3.5" />
+                <Languages className="w-5 h-5 shrink-0" />
                 <span>{lang === "kg" ? t("lang.kg") : t("lang.ru")}</span>
               </button>
             </div>

@@ -12,8 +12,7 @@ const translations: Record<Language, Dict> = {
     "lang.ru": "РУС",
     "lang.toggle.aria": "Тилди алмаштыруу",
 
-    "header.brand": "МАК",
-    "header.brand.full": "Мени Алып Кет",
+    "header.brand": "Ала Кет",
     "header.today": "Бүгүн",
     "header.stats": "{trips} сапар • {seats} орун",
     "header.title": "Кыргызстан боюнча сапарлар",
@@ -274,8 +273,7 @@ const translations: Record<Language, Dict> = {
     "lang.ru": "РУС",
     "lang.toggle.aria": "Сменить язык",
 
-    "header.brand": "МАК",
-    "header.brand.full": "Мени Алып Кет",
+    "header.brand": "Ала Кет",
     "header.today": "Сегодня",
     "header.stats": "{trips} поездок • {seats} мест",
     "header.title": "Поездки по Кыргызстану",

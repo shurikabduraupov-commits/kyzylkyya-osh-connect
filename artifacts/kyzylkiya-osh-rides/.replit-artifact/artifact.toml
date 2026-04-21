@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/"
-title = "МАК — Мени Алып Кет"
+title = "Ала Кет"
 version = "1.0.0"
 id = "artifacts/kyzylkiya-osh-rides"
 router = "path"

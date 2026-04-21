@@ -1,3 +1,12 @@
-<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="180" height="180" rx="36" fill="#FF3C00"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180" fill="none">
+  <rect width="180" height="180" rx="36" fill="#1f7a86"/>
+  <text
+    x="90"
+    y="112"
+    text-anchor="middle"
+    font-family="system-ui, 'Segoe UI', sans-serif"
+    font-size="64"
+    font-weight="700"
+    fill="white"
+  >АК</text>
 </svg>
