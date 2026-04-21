@@ -84,7 +84,8 @@ export function Home() {
     },
   });
 
-  const showAuthGate = !authUser && (viteAuthGate || serverAuthRequired === true);
+  const hasToken = !!readAuthToken();
+  const showAuthGate = (!authUser || !hasToken) && (viteAuthGate || serverAuthRequired === true);
   const waitingAuthSettings = !viteAuthGate && serverAuthRequired === null;
 
   if (waitingAuthSettings) {
