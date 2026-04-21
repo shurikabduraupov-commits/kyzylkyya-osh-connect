@@ -29,7 +29,7 @@ import { useAllSettlements } from "@/lib/all-settlements";
 import { SettlementCombobox } from "@/components/settlement-combobox";
 import { useTranslation } from "@/lib/i18n";
 import { readProfile, updateProfile, isProfileComplete } from "@/lib/profile";
-import { readAuthUser } from "@/lib/auth";
+import { clearAuthSession, readAuthUser } from "@/lib/auth";
 import { alertWarning } from "@/lib/alerts";
 import { KG_MOBILE_PREFIX, isValidKg996Phone, kg996Suffix } from "@/lib/phone-kg";
 import { apiUrl } from "@/lib/api-url";
@@ -89,6 +89,18 @@ function getApiErrorMessage(err: unknown): string | null {
   }
   if (typeof e.message === "string" && e.message.trim()) return e.message.trim();
   return null;
+}
+
+function isAuthError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const e = err as { status?: unknown; body?: unknown; message?: unknown };
+  if (e.status === 401) return true;
+  const bodyMsg =
+    e.body && typeof e.body === "object" && "message" in e.body
+      ? (e.body as { message?: unknown }).message
+      : undefined;
+  const text = String(bodyMsg ?? e.message ?? "").toLowerCase();
+  return text.includes("авторизация") || text.includes("session") || text.includes("сессия");
 }
 
 export function DriverMode() {
@@ -356,6 +368,15 @@ export function DriverMode() {
         queryClient.invalidateQueries({ queryKey: getListActiveDriversQueryKey() });
       },
       onError: (error) => {
+        if (isAuthError(error)) {
+          clearAuthSession();
+          toast({
+            title: t("auth.required"),
+            variant: "destructive",
+          });
+          window.location.reload();
+          return;
+        }
         setIsPublishCollapsed(false);
         toast({
           title: getApiErrorMessage(error) ?? t("driver.publish.error"),

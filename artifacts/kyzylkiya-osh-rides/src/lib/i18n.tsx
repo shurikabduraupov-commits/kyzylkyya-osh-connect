@@ -39,6 +39,7 @@ const translations: Record<Language, Dict> = {
     "auth.logout.confirm.desc": "Бул түзмөктөгү аккаунт унутулат. Кайра кирүү үчүн Telegram аркылуу авторизация талап кылынат.",
     "auth.logout.confirm.cancel": "Жокко чыгаруу",
     "auth.logout.confirm.action": "Ооба, чыгуу",
+    "auth.required": "Авторизация талап кылынат. Telegram аркылуу кайра кириңиз.",
 
     "header.brand": "Ала Кет",
     "header.link.telegram": "Telegram бот",
@@ -334,6 +335,7 @@ const translations: Record<Language, Dict> = {
     "auth.logout.confirm.desc": "Сайт забудет аккаунт на этом устройстве. Для входа снова потребуется авторизация через Telegram.",
     "auth.logout.confirm.cancel": "Отмена",
     "auth.logout.confirm.action": "Да, выйти",
+    "auth.required": "Требуется авторизация. Войдите снова через Telegram.",
 
     "header.brand": "Ала Кет",
     "header.link.telegram": "Бот в Telegram",

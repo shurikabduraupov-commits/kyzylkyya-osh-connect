@@ -42,7 +42,7 @@ import { useTranslation } from "@/lib/i18n";
 import { readProfile, updateProfile } from "@/lib/profile";
 import { prefetchCityPlaces } from "@/lib/nominatim";
 import { alertSuccess, alertWarning, ensureNotificationPermission, primeAudio } from "@/lib/alerts";
-import { readAuthUser } from "@/lib/auth";
+import { clearAuthSession, readAuthUser } from "@/lib/auth";
 import {
   clearActiveRideRequestId,
   readActiveRideRequestId,
@@ -100,6 +100,18 @@ function getApiErrorMessage(err: unknown): string | null {
   }
   if (typeof e.message === "string" && e.message.trim()) return e.message.trim();
   return null;
+}
+
+function isAuthError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const e = err as { status?: unknown; body?: unknown; message?: unknown };
+  if (e.status === 401) return true;
+  const bodyMsg =
+    e.body && typeof e.body === "object" && "message" in e.body
+      ? (e.body as { message?: unknown }).message
+      : undefined;
+  const text = String(bodyMsg ?? e.message ?? "").toLowerCase();
+  return text.includes("авторизация") || text.includes("session") || text.includes("сессия");
 }
 
 export function PassengerMode() {
@@ -260,6 +272,15 @@ export function PassengerMode() {
         });
       },
       onError: (error) => {
+        if (isAuthError(error)) {
+          clearAuthSession();
+          toast({
+            title: t("auth.required"),
+            variant: "destructive",
+          });
+          window.location.reload();
+          return;
+        }
         toast({
           title: getApiErrorMessage(error) ?? t("passenger.toast.error.title"),
           description: getApiErrorMessage(error) ? undefined : t("passenger.toast.error.desc"),
