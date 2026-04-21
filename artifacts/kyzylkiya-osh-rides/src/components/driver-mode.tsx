@@ -29,6 +29,7 @@ import { useAllSettlements } from "@/lib/all-settlements";
 import { SettlementCombobox } from "@/components/settlement-combobox";
 import { useTranslation } from "@/lib/i18n";
 import { readProfile, updateProfile, isProfileComplete } from "@/lib/profile";
+import { readAuthUser } from "@/lib/auth";
 import { alertWarning } from "@/lib/alerts";
 import { KG_MOBILE_PREFIX, isValidKg996Phone, kg996Suffix } from "@/lib/phone-kg";
 import { apiUrl } from "@/lib/api-url";
@@ -82,7 +83,16 @@ export function DriverMode() {
   const [ratingRideId, setRatingRideId] = useState<string | null>(null);
   const [ratingValue, setRatingValue] = useState(5);
   const [isRatingSubmitting, setIsRatingSubmitting] = useState(false);
-  const [savedProfile, setSavedProfile] = useState(() => readProfile());
+  const [savedProfile, setSavedProfile] = useState(() => {
+    const profile = readProfile();
+    const authPhone = readAuthUser()?.phone?.trim() ?? "";
+    if (!profile.driverPhone && /^\+996\d{9}$/.test(authPhone)) {
+      const merged = { ...profile, driverPhone: authPhone };
+      updateProfile({ driverPhone: authPhone });
+      return merged;
+    }
+    return profile;
+  });
   const hasSavedProfile = isProfileComplete(savedProfile);
   const settlements = useAllSettlements();
 

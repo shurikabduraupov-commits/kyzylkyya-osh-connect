@@ -15,10 +15,10 @@ const translations: Record<Language, Dict> = {
     "auth.telegram.title": "Кирүү / катталуу",
     "auth.telegram.lead":
       "Кызматты колдонуу үчүн Telegram аккаунтыңыз менен бир жолу катталыңыз (кирүү). Бул сиздин Telegram IDңизди гана сактайт.",
-    "auth.telegram.step1": "1. Төмөндөгү баскыч менен ботту ачыңыз (керек болсо гана).",
-    "auth.telegram.step2": "2. Төмөндө Telegramдин расмий «Кирүү» баскычын басыңыз жана ырастаңыз.",
-    "auth.telegram.step3":
-      "3. Эгер баскыч көрүнбөсө: @BotFather → ботту тандаңыз → /setdomain → сайттын дарегин жазыңыз (мисалы, https://…railway.app).",
+    "auth.telegram.step1": "1. Төмөндө Telegramдин расмий «Кирүү» баскычын басыңыз жана ырастаңыз.",
+    "auth.telegram.step2":
+      "2. Эгер баскыч көрүнбөсө: @BotFather → ботту тандаңыз → /setdomain → сайттын дарегин жазыңыз (мисалы, https://…railway.app).",
+    "auth.telegram.step3": "3. Кирүү биринчи жолу гана талап кылынышы мүмкүн: андан кийин сессия сакталат.",
     "auth.telegram.openBot": "Ботту Telegramде ачуу",
     "auth.telegram.checking": "Текшерүү…",
     "auth.telegram.notConfigured": "Серверде Telegram коюлган эмес (TELEGRAM_BOT_TOKEN).",
@@ -59,7 +59,7 @@ const translations: Record<Language, Dict> = {
     "passenger.phone.label": "Байланыш телефону",
     "passenger.phone.placeholder": "+996 555 000 000",
     "passenger.phone.placeholder-digits": "000000000",
-    "passenger.phone.hint-kg": "+996 тууралуу, андан кийин 9 сан (улуттук номер).",
+    "passenger.phone.hint-kg": "Так 9 сан киргизиңиз (мисалы: 555123456).",
     "passenger.notes.label": "Кошумча эскертүү (милдеттүү)",
     "passenger.notes.placeholder": "мисалы: үй номери, көрүнгөн белги, жүк бар",
     "passenger.seats.label": "Канча орун керек?",
@@ -302,10 +302,10 @@ const translations: Record<Language, Dict> = {
     "auth.telegram.title": "Вход и регистрация",
     "auth.telegram.lead":
       "Чтобы пользоваться сервисом, один раз войдите через Telegram — это и есть регистрация: мы сохраняем только ваш Telegram ID и имя из профиля.",
-    "auth.telegram.step1": "1. При необходимости откройте бота кнопкой ниже.",
-    "auth.telegram.step2": "2. Нажмите официальную кнопку «Войти через Telegram» и подтвердите запрос.",
-    "auth.telegram.step3":
-      "3. Если кнопки нет: в @BotFather выберите бота → команда /setdomain → укажите адрес сайта (например https://…railway.app).",
+    "auth.telegram.step1": "1. Нажмите официальную кнопку «Войти через Telegram» и подтвердите запрос.",
+    "auth.telegram.step2":
+      "2. Если кнопки нет: в @BotFather выберите бота → команда /setdomain → укажите адрес сайта (например https://…railway.app).",
+    "auth.telegram.step3": "3. Обычно вход нужен только первый раз: потом сессия сохраняется.",
     "auth.telegram.openBot": "Открыть бота в Telegram",
     "auth.telegram.checking": "Проверяем вход…",
     "auth.telegram.notConfigured": "Вход через Telegram на сервере не настроен (нужен TELEGRAM_BOT_TOKEN).",
@@ -346,7 +346,7 @@ const translations: Record<Language, Dict> = {
     "passenger.phone.label": "Контактный телефон",
     "passenger.phone.placeholder": "+996 555 000 000",
     "passenger.phone.placeholder-digits": "000000000",
-    "passenger.phone.hint-kg": "Префикс +996 уже указан, введите ещё 9 цифр номера.",
+    "passenger.phone.hint-kg": "Введите строго 9 цифр номера (пример: 555123456).",
     "passenger.notes.label": "Дополнительная заметка (обязательно)",
     "passenger.notes.placeholder": "например: номер дома, ориентир, есть багаж",
     "passenger.seats.label": "Сколько мест нужно?",

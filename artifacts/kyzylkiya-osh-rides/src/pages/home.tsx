@@ -7,13 +7,12 @@ import {
 import { PassengerMode } from "@/components/passenger-mode";
 import { DriverMode } from "@/components/driver-mode";
 import { TelegramAuthGate } from "@/components/telegram-auth-gate";
-import { UserRound, CarFront, Languages, Send, Loader2 } from "lucide-react";
+import { UserRound, CarFront, Languages, Loader2 } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "@/lib/i18n";
 import { readAuthUser, type AuthUser } from "@/lib/auth";
 import { useEffect, useState } from "react";
-import { getTelegramAuthConfig } from "@/lib/auth";
 import { apiUrl } from "@/lib/api-url";
 
 export function Home() {
@@ -25,18 +24,6 @@ export function Home() {
   const [serverAuthRequired, setServerAuthRequired] = useState<boolean | null>(() =>
     viteAuthGate ? false : null,
   );
-  const [telegramBotUrl, setTelegramBotUrl] = useState<string | null>(() => {
-    const v = (import.meta.env.VITE_TELEGRAM_BOT_USERNAME as string | undefined)?.trim().replace(/^@/, "");
-    return v ? `https://t.me/${v}` : null;
-  });
-
-  useEffect(() => {
-    void getTelegramAuthConfig()
-      .then((cfg) => {
-        if (cfg.openBotUrl) setTelegramBotUrl(cfg.openBotUrl);
-      })
-      .catch(() => {});
-  }, []);
 
   useEffect(() => {
     if (viteAuthGate) return;
@@ -110,18 +97,6 @@ export function Home() {
                   </p>
                 </div>
               )}
-              {telegramBotUrl ? (
-                <a
-                  href={telegramBotUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={t("header.link.telegram")}
-                  className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 active:bg-white/30 transition-colors backdrop-blur-sm rounded-full px-3 py-2 text-xs sm:text-sm font-bold tracking-wide"
-                >
-                  <Send className="w-4 h-4 shrink-0" aria-hidden />
-                  <span className="hidden xs:inline">{t("header.link.telegram")}</span>
-                </a>
-              ) : null}
               <button
                 type="button"
                 onClick={toggle}

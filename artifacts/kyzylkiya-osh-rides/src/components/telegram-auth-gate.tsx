@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import {
   completeTelegramWidgetLogin,
   getTelegramAuthConfig,
@@ -21,7 +20,6 @@ export function TelegramAuthGate({ onSuccess }: Props) {
   const [isBusy, setIsBusy] = useState(false);
   const [isConfigured, setIsConfigured] = useState(true);
   const [botUsername, setBotUsername] = useState("");
-  const [openBotUrl, setOpenBotUrl] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -32,7 +30,6 @@ export function TelegramAuthGate({ onSuccess }: Props) {
         if (!mounted) return;
         setIsConfigured(config.enabled);
         setBotUsername(config.botUsername);
-        setOpenBotUrl(config.openBotUrl);
       } catch (e) {
         if (!mounted) return;
         setError(e instanceof Error ? e.message : "Не удалось загрузить Telegram вход");
@@ -108,14 +105,6 @@ export function TelegramAuthGate({ onSuccess }: Props) {
           <p className="text-xs text-muted-foreground leading-relaxed border-t border-border pt-3">
             {t("auth.telegram.menuButtonHint")}
           </p>
-
-          {openBotUrl ? (
-            <Button variant="outline" className="w-full" asChild>
-              <a href={openBotUrl} target="_blank" rel="noopener noreferrer">
-                {t("auth.telegram.openBot")}
-              </a>
-            </Button>
-          ) : null}
 
           {!isConfigured ? (
             <p className="text-sm text-destructive">{t("auth.telegram.notConfigured")}</p>

@@ -42,6 +42,7 @@ import { useTranslation } from "@/lib/i18n";
 import { readProfile, updateProfile } from "@/lib/profile";
 import { prefetchCityPlaces } from "@/lib/nominatim";
 import { alertSuccess, alertWarning, ensureNotificationPermission, primeAudio } from "@/lib/alerts";
+import { readAuthUser } from "@/lib/auth";
 import {
   clearActiveRideRequestId,
   readActiveRideRequestId,
@@ -160,13 +161,18 @@ export function PassengerMode() {
   );
 
   const initialProfile = useMemo(() => readProfile(), []);
+  const authPhonePrefill = useMemo(() => {
+    const phone = readAuthUser()?.phone?.trim() ?? "";
+    if (/^\+996\d{9}$/.test(phone)) return phone;
+    return null;
+  }, []);
   const form = useForm<CreateRideValues>({
     resolver: zodResolver(createRideSchema),
     defaultValues: {
       origin: initialProfile.lastOrigin || DEFAULT_ORIGIN,
       destination: initialProfile.lastDestination || DEFAULT_DESTINATION,
       pickupAddress: "",
-      passengerPhone: KG_MOBILE_PREFIX,
+      passengerPhone: authPhonePrefill ?? KG_MOBILE_PREFIX,
       notes: "",
       seats: 1,
       departDay: "today",
@@ -853,7 +859,10 @@ export function PassengerMode() {
                         inputMode="numeric"
                         autoComplete="tel-national"
                         placeholder={t("passenger.phone.placeholder-digits")}
+                        minLength={9}
                         maxLength={9}
+                        pattern="\d{9}"
+                        title={t("passenger.phone.hint-kg")}
                         value={kg996Suffix(field.value)}
                         onChange={(e) => {
                           const d = e.target.value.replace(/\D/g, "").slice(0, 9);
