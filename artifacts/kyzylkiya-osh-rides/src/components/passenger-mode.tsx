@@ -461,6 +461,14 @@ export function PassengerMode() {
     .filter((r) => r.status === "completed" && r.passengerPhone === historyPhone)
     .slice(0, 20);
 
+  const repeatFromHistory = (ride: (typeof passengerHistory)[number]) => {
+    form.setValue("origin", ride.origin, { shouldValidate: true, shouldDirty: true });
+    form.setValue("destination", ride.destination, { shouldValidate: true, shouldDirty: true });
+    form.setValue("seats", ride.seats, { shouldValidate: true, shouldDirty: true });
+    form.setValue("pickupAddress", "", { shouldValidate: true, shouldDirty: true });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
     <div className="space-y-4">
     {activeRequestId && (
@@ -1022,6 +1030,15 @@ export function PassengerMode() {
                 <p className="text-xs text-muted-foreground mt-1">
                   {formatTimeShort(ride.departAfter)} - {formatTimeShort(ride.departBefore)} · {t("passenger.seats.value", { n: ride.seats })}
                 </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 h-8"
+                  onClick={() => repeatFromHistory(ride)}
+                >
+                  {t("passenger.history.repeat")}
+                </Button>
               </div>
             ))}
           </div>

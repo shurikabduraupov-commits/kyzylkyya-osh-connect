@@ -130,6 +130,7 @@ const translations: Record<Language, Dict> = {
     "passenger.history.subtitle": "Сиз аяктаган сапарлар",
     "passenger.history.empty": "Азырынча аяктаган сапар жок",
     "passenger.history.need-phone": "Тарыхты көрүү үчүн телефон номерин толук киргизиңиз",
+    "passenger.history.repeat": "Кайталап түзүү",
     "driver.mine.title": "Кабыл алган заказдарым",
     "driver.mine.empty": "Азырынча заказ жок",
     "driver.mine.release": "Заказдан баш тартуу",
@@ -181,6 +182,8 @@ const translations: Record<Language, Dict> = {
     "passenger.drivers.kind.offer": "Кулактандыруу",
     "passenger.drivers.kind.ride": "Жолдо",
     "passenger.drivers.seats-free": "{n} орун бош",
+    "passenger.drivers.online": "Онлайн",
+    "passenger.drivers.offline": "Оффлайн",
     "passenger.drivers.depart": "Чыгуу",
 
     "passenger.error.origin": "Кайсы жерден чыгарыңызды тандаңыз",
@@ -422,6 +425,7 @@ const translations: Record<Language, Dict> = {
     "passenger.history.subtitle": "Ваши завершенные поездки",
     "passenger.history.empty": "Пока нет завершенных поездок",
     "passenger.history.need-phone": "Чтобы видеть историю, введите полный номер телефона",
+    "passenger.history.repeat": "Повторить заявку",
     "driver.mine.title": "Мои принятые заказы",
     "driver.mine.empty": "Пока нет принятых заказов",
     "driver.mine.release": "Отказаться от заказа",
@@ -473,6 +477,8 @@ const translations: Record<Language, Dict> = {
     "passenger.drivers.kind.offer": "Объявил поездку",
     "passenger.drivers.kind.ride": "Принял заявку",
     "passenger.drivers.seats-free": "{n} мест свободно",
+    "passenger.drivers.online": "Онлайн",
+    "passenger.drivers.offline": "Оффлайн",
     "passenger.drivers.depart": "Выезд",
 
     "passenger.error.origin": "Выберите пункт отправления",

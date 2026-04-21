@@ -13,6 +13,7 @@ import uuid
 import hashlib
 import hmac
 import threading
+import time
 
 _STATIC_ROOT = Path(
     os.environ.get(
@@ -25,10 +26,13 @@ requests_store = []
 offers_store = []
 auth_sessions = {}
 phone_users = {}
+action_throttle = {}
 
 DATA_DIR = os.path.dirname(os.path.abspath(__file__))
 AUTH_SESSIONS_FILE = os.environ.get("AUTH_SESSIONS_FILE", "").strip() or os.path.join(DATA_DIR, "auth_sessions.json")
 PHONE_USERS_FILE = os.environ.get("PHONE_USERS_FILE", "").strip() or os.path.join(DATA_DIR, "phone_users.json")
+REQUEST_CREATE_COOLDOWN_SEC = 20
+OFFER_CREATE_COOLDOWN_SEC = 20
 
 SETTLEMENTS_FILE = os.path.join(os.path.dirname(__file__), "custom_settlements.json")
 ADMIN_TOKEN = os.environ.get("MAK_ADMIN_TOKEN", "mak-admin-2026")
@@ -152,6 +156,49 @@ custom_settlements = _load_custom_settlements()
 
 def now_iso():
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def parse_iso_utc(value):
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00")).astimezone(timezone.utc)
+    except ValueError:
+        return None
+
+
+def expire_stale_entities():
+    now = datetime.now(timezone.utc)
+    for ride in requests_store:
+        if ride.get("status") not in ("active", "accepted"):
+            continue
+        before = parse_iso_utc(ride.get("departBefore"))
+        if not before or before > now:
+            continue
+        if ride.get("status") == "accepted":
+            clear_driver_acceptance(ride)
+        ride["status"] = "cancelled"
+        ride["cancelledAt"] = now_iso()
+    for offer in offers_store:
+        if offer.get("status") != "active":
+            continue
+        before = parse_iso_utc(offer.get("departBefore"))
+        if not before or before > now:
+            continue
+        offer["status"] = "cancelled"
+        offer["cancelledAt"] = now_iso()
+
+
+def hit_rate_limit(actor_key, action, cooldown_sec):
+    key = f"{action}:{actor_key}"
+    now = time.time()
+    prev = action_throttle.get(key)
+    if prev is not None:
+        delta = now - prev
+        if delta < cooldown_sec:
+            return int(cooldown_sec - delta) + 1
+    action_throttle[key] = now
+    return 0
 
 
 def make_route(origin, destination):
@@ -672,6 +719,7 @@ class RideHandler(BaseHTTPRequestHandler):
         self._send_json(200, {"ok": True})
 
     def do_GET(self):
+        expire_stale_entities()
         parsed = urlparse(self.path)
         req_path = parsed.path or "/"
         if not req_path.startswith("/rides-api"):
@@ -821,6 +869,7 @@ class RideHandler(BaseHTTPRequestHandler):
         self._send_json(404, {"message": "Маршрут табылган жок"})
 
     def do_POST(self):
+        expire_stale_entities()
         req_path = urlparse(self.path).path or "/"
         if not req_path.startswith("/rides-api"):
             self.send_response(404)
@@ -849,6 +898,7 @@ class RideHandler(BaseHTTPRequestHandler):
             if _env_truthy("AUTH_REQUIRED") and not self._current_session_user():
                 self._send_json(401, {"message": "Авторизация талап кылынат"})
                 return
+            session_user = self._current_session_user()
             origin = str(data.get("origin", "")).strip()
             destination = str(data.get("destination", "")).strip()
             pickup_address = str(data.get("pickupAddress", "")).strip()
@@ -903,7 +953,15 @@ class RideHandler(BaseHTTPRequestHandler):
                     {"message": "Телефон +996 менен андан кийин 9 сан болушу керек"},
                 )
                 return
-            session_user = self._current_session_user()
+            actor_key = (
+                str(session_user.get("id", "")).strip()
+                if session_user and str(session_user.get("id", "")).strip()
+                else passenger_phone
+            )
+            retry_after = hit_rate_limit(actor_key, "create_request", REQUEST_CREATE_COOLDOWN_SEC)
+            if retry_after > 0:
+                self._send_json(429, {"message": f"Өтө бат жөнөтүлдү. {retry_after} сек күтүңүз."})
+                return
             if session_user and session_user.get("telegramUserId"):
                 session_user["phone"] = passenger_phone
                 upsert_telegram_user_phone(session_user.get("telegramUserId"), passenger_phone)
@@ -980,6 +1038,7 @@ class RideHandler(BaseHTTPRequestHandler):
             if _env_truthy("AUTH_REQUIRED") and not self._current_session_user():
                 self._send_json(401, {"message": "Авторизация талап кылынат"})
                 return
+            session_user = self._current_session_user()
             origin = str(data.get("origin", "")).strip()
             destination = str(data.get("destination", "")).strip()
             notes = str(data.get("notes", "")).strip()
@@ -1056,7 +1115,15 @@ class RideHandler(BaseHTTPRequestHandler):
             if not re.fullmatch(r"\+996\d{9}", driver_phone):
                 self._send_json(400, {"message": "Телефон +996 менен андан кийин 9 сан болушу керек"})
                 return
-            session_user = self._current_session_user()
+            actor_key = (
+                str(session_user.get("id", "")).strip()
+                if session_user and str(session_user.get("id", "")).strip()
+                else driver_phone
+            )
+            retry_after = hit_rate_limit(actor_key, "create_offer", OFFER_CREATE_COOLDOWN_SEC)
+            if retry_after > 0:
+                self._send_json(429, {"message": f"Өтө бат жөнөтүлдү. {retry_after} сек күтүңүз."})
+                return
             if session_user and session_user.get("telegramUserId"):
                 session_user["phone"] = driver_phone
                 upsert_telegram_user_phone(session_user.get("telegramUserId"), driver_phone)

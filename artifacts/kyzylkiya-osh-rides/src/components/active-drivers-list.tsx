@@ -23,6 +23,13 @@ export function ActiveDriversList({ origin, destination }: Props) {
       ? drivers.filter((d) => d.origin === origin && d.destination === destination)
       : drivers;
 
+  const isOnline = (lastSeenAt?: string | null) => {
+    if (!lastSeenAt) return false;
+    const ts = Date.parse(lastSeenAt);
+    if (Number.isNaN(ts)) return false;
+    return Date.now() - ts <= 15 * 60 * 1000;
+  };
+
   return (
     <Card className="w-full shadow-sm border-border">
       <CardHeader className="pb-3">
@@ -88,6 +95,19 @@ export function ActiveDriversList({ origin, destination }: Props) {
                       <span className="truncate">{d.origin}</span>
                       <ArrowRight className="w-3 h-3 shrink-0" />
                       <span className="truncate">{d.destination}</span>
+                    </p>
+                    <p className="text-[11px] mt-1">
+                      <span
+                        className={
+                          isOnline(d.lastSeenAt)
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-muted-foreground"
+                        }
+                      >
+                        {isOnline(d.lastSeenAt)
+                          ? t("passenger.drivers.online")
+                          : t("passenger.drivers.offline")}
+                      </span>
                     </p>
                   </div>
                   <span
