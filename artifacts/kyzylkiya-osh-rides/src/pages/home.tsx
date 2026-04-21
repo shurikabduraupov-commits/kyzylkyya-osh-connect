@@ -6,7 +6,7 @@ import {
 } from "@workspace/api-client-react";
 import { PassengerMode } from "@/components/passenger-mode";
 import { DriverMode } from "@/components/driver-mode";
-import { PhoneAuthGate } from "@/components/phone-auth-gate";
+import { TelegramAuthGate } from "@/components/telegram-auth-gate";
 import { UserRound, CarFront, Languages, Send, Loader2 } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -75,7 +75,7 @@ export function Home() {
   }
 
   if (showAuthGate) {
-    return <PhoneAuthGate onSuccess={setAuthUser} />;
+    return <TelegramAuthGate onSuccess={setAuthUser} />;
   }
 
   return (
