@@ -72,6 +72,25 @@ function formatDateTimeShort(iso: string | null | undefined): string {
   });
 }
 
+function getApiErrorMessage(err: unknown): string | null {
+  if (!err || typeof err !== "object") return null;
+  const e = err as {
+    body?: unknown;
+    response?: { data?: unknown };
+    data?: unknown;
+    message?: string;
+  };
+  const candidates = [e.body, e.response?.data, e.data];
+  for (const c of candidates) {
+    if (c && typeof c === "object" && "message" in c) {
+      const m = (c as { message?: unknown }).message;
+      if (typeof m === "string" && m.trim()) return m.trim();
+    }
+  }
+  if (typeof e.message === "string" && e.message.trim()) return e.message.trim();
+  return null;
+}
+
 export function DriverMode() {
   const { t, lang } = useTranslation();
   const { toast } = useToast();
@@ -336,10 +355,10 @@ export function DriverMode() {
         queryClient.invalidateQueries({ queryKey: getListDriverOffersQueryKey() });
         queryClient.invalidateQueries({ queryKey: getListActiveDriversQueryKey() });
       },
-      onError: () => {
+      onError: (error) => {
         setIsPublishCollapsed(false);
         toast({
-          title: t("driver.publish.error"),
+          title: getApiErrorMessage(error) ?? t("driver.publish.error"),
           variant: "destructive",
         });
       },
