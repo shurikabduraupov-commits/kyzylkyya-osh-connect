@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useTranslation } from "@/lib/i18n";
 import {
+  AUTH_SESSION_CLEARED_EVENT,
   clearAuthSession,
   readAuthToken,
   readAuthUser,
@@ -74,6 +75,16 @@ export function Home() {
     });
     return () => {
       cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const onSessionCleared = () => {
+      setAuthUser(null);
+    };
+    window.addEventListener(AUTH_SESSION_CLEARED_EVENT, onSessionCleared);
+    return () => {
+      window.removeEventListener(AUTH_SESSION_CLEARED_EVENT, onSessionCleared);
     };
   }, []);
 

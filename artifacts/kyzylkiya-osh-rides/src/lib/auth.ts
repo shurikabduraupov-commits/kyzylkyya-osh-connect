@@ -12,6 +12,7 @@ export type AuthUser = {
 
 const AUTH_TOKEN_KEY = "mak.auth.token";
 const AUTH_USER_KEY = "mak.auth.user";
+export const AUTH_SESSION_CLEARED_EVENT = "mak:auth-session-cleared";
 
 function authHeaders() {
   const token = readAuthToken();
@@ -34,6 +35,7 @@ export function writeAuthUser(user: AuthUser) {
 export function clearAuthSession() {
   localStorage.removeItem(AUTH_TOKEN_KEY);
   localStorage.removeItem(AUTH_USER_KEY);
+  window.dispatchEvent(new Event(AUTH_SESSION_CLEARED_EVENT));
 }
 
 export function readAuthUser(): AuthUser | null {

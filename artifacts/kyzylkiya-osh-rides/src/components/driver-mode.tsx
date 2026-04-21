@@ -374,7 +374,6 @@ export function DriverMode() {
             title: t("auth.required"),
             variant: "destructive",
           });
-          window.location.reload();
           return;
         }
         setIsPublishCollapsed(false);

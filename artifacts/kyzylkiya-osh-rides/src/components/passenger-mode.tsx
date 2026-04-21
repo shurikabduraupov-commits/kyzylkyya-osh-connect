@@ -278,7 +278,6 @@ export function PassengerMode() {
             title: t("auth.required"),
             variant: "destructive",
           });
-          window.location.reload();
           return;
         }
         toast({
