@@ -105,6 +105,10 @@ export function TelegramAuthGate({ onSuccess }: Props) {
             <li className="text-muted-foreground">{t("auth.telegram.step3")}</li>
           </ol>
 
+          <p className="text-xs text-muted-foreground leading-relaxed border-t border-border pt-3">
+            {t("auth.telegram.menuButtonHint")}
+          </p>
+
           {openBotUrl ? (
             <Button variant="outline" className="w-full" asChild>
               <a href={openBotUrl} target="_blank" rel="noopener noreferrer">

@@ -36,6 +36,10 @@ TELEGRAM_USERS_FILE = (
 _telegram_registry_lock = threading.Lock()
 
 
+def _env_truthy(name):
+    return os.environ.get(name, "").strip().lower() in ("1", "true", "yes", "on")
+
+
 def _load_custom_settlements():
     try:
         with open(SETTLEMENTS_FILE, "r", encoding="utf-8") as fh:
@@ -641,6 +645,19 @@ class RideHandler(BaseHTTPRequestHandler):
                     "telegramChatId": session.get("telegramChatId", ""),
                     "username": session.get("username", ""),
                     "photoUrl": session.get("photoUrl", ""),
+                },
+            )
+            return
+        if parts == ["auth", "settings"]:
+            bot_user = TELEGRAM_BOT_USERNAME.lstrip("@").strip()
+            open_bot = f"https://t.me/{bot_user}" if bot_user else ""
+            self._send_json(
+                200,
+                {
+                    "authRequired": _env_truthy("AUTH_REQUIRED"),
+                    "botUsername": bot_user,
+                    "openBotUrl": open_bot,
+                    "telegramLoginConfigured": bool(TELEGRAM_BOT_TOKEN and bot_user),
                 },
             )
             return

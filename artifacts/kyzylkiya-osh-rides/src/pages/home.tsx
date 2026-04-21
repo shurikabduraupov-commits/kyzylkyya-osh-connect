@@ -7,19 +7,24 @@ import {
 import { PassengerMode } from "@/components/passenger-mode";
 import { DriverMode } from "@/components/driver-mode";
 import { TelegramAuthGate } from "@/components/telegram-auth-gate";
-import { UserRound, CarFront, Languages, Send } from "lucide-react";
+import { UserRound, CarFront, Languages, Send, Loader2 } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "@/lib/i18n";
 import { readAuthUser, type AuthUser } from "@/lib/auth";
 import { useEffect, useState } from "react";
 import { getTelegramAuthConfig } from "@/lib/auth";
+import { apiUrl } from "@/lib/api-url";
 
 export function Home() {
   const { t, lang, toggle } = useTranslation();
   const queryClient = useQueryClient();
-  const authEnabled = import.meta.env.VITE_AUTH_ENABLED === "true";
+  const viteAuthGate = import.meta.env.VITE_AUTH_ENABLED === "true";
   const [authUser, setAuthUser] = useState<AuthUser | null>(() => readAuthUser());
+  /** null = ещё грузим с сервера; false/true — ответ /rides-api/auth/settings */
+  const [serverAuthRequired, setServerAuthRequired] = useState<boolean | null>(() =>
+    viteAuthGate ? false : null,
+  );
   const [telegramBotUrl, setTelegramBotUrl] = useState<string | null>(() => {
     const v = (import.meta.env.VITE_TELEGRAM_BOT_USERNAME as string | undefined)?.trim().replace(/^@/, "");
     return v ? `https://t.me/${v}` : null;
@@ -33,6 +38,23 @@ export function Home() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (viteAuthGate) return;
+    let cancelled = false;
+    void fetch(apiUrl("/rides-api/auth/settings"))
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("settings"))))
+      .then((data: { authRequired?: unknown }) => {
+        if (cancelled) return;
+        setServerAuthRequired(Boolean(data?.authRequired));
+      })
+      .catch(() => {
+        if (!cancelled) setServerAuthRequired(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [viteAuthGate]);
+
   const { data: stats } = useGetRideStats({
     query: {
       refetchInterval: 10000,
@@ -40,7 +62,19 @@ export function Home() {
     },
   });
 
-  if (authEnabled && !authUser) {
+  const showTelegramGate = !authUser && (viteAuthGate || serverAuthRequired === true);
+  const waitingAuthSettings = !viteAuthGate && serverAuthRequired === null;
+
+  if (waitingAuthSettings) {
+    return (
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center gap-3 bg-background text-muted-foreground">
+        <Loader2 className="h-9 w-9 animate-spin text-primary" aria-hidden />
+        <p className="text-sm">{t("auth.settings.loading")}</p>
+      </div>
+    );
+  }
+
+  if (showTelegramGate) {
     return <TelegramAuthGate onSuccess={setAuthUser} />;
   }
 

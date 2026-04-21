@@ -22,6 +22,9 @@ const translations: Record<Language, Dict> = {
     "auth.telegram.openBot": "Ботту Telegramде ачуу",
     "auth.telegram.checking": "Текшерүү…",
     "auth.telegram.notConfigured": "Серверде Telegram коюлган эмес (TELEGRAM_BOT_TOKEN).",
+    "auth.telegram.menuButtonHint":
+      "Эгер колдонуучу алгач Telegramден кирсин десеңиз: @BotFather → Bot Settings → Menu Button → сайттын дарегин көрсөтүңүз (мисалы, https://…railway.app).",
+    "auth.settings.loading": "Жүктөлүүдө…",
 
     "header.brand": "Ала Кет",
     "header.link.telegram": "Telegram бот",
@@ -297,6 +300,9 @@ const translations: Record<Language, Dict> = {
     "auth.telegram.openBot": "Открыть бота в Telegram",
     "auth.telegram.checking": "Проверяем вход…",
     "auth.telegram.notConfigured": "Вход через Telegram на сервере не настроен (нужен TELEGRAM_BOT_TOKEN).",
+    "auth.telegram.menuButtonHint":
+      "Чтобы человек сначала заходил в Telegram: в @BotFather → Bot Settings → Menu Button → укажите адрес вашего сайта (например https://…railway.app).",
+    "auth.settings.loading": "Загрузка…",
 
     "header.brand": "Ала Кет",
     "header.link.telegram": "Бот в Telegram",

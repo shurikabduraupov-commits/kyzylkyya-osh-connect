@@ -48,11 +48,8 @@ function App() {
     setBaseUrl(baseUrl ? baseUrl : null);
   }, []);
   useEffect(() => {
-    if (import.meta.env.VITE_AUTH_ENABLED === "true") {
-      setAuthTokenGetter(() => readAuthToken());
-    } else {
-      setAuthTokenGetter(null);
-    }
+    setAuthTokenGetter(() => readAuthToken());
+    return () => setAuthTokenGetter(null);
   }, []);
   return (
     <QueryClientProvider client={queryClient}>
