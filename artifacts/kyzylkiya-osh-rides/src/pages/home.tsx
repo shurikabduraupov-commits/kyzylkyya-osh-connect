@@ -128,17 +128,6 @@ export function Home() {
                 </p>
               ) : null}
               <div className="flex items-center gap-2">
-              {stats && (
-                <div className="text-right text-sm hidden xs:block">
-                  <p className="font-medium text-white/90">{t("header.today")}</p>
-                  <p className="opacity-80">
-                    {t("header.stats", {
-                      trips: stats.acceptedRequests,
-                      seats: stats.totalSeats,
-                    })}
-                  </p>
-                </div>
-              )}
               <button
                 type="button"
                 onClick={() => setLogoutConfirmOpen(true)}
@@ -159,18 +148,6 @@ export function Home() {
               </div>
             </div>
           </div>
-
-          {stats && (
-            <div className="text-sm text-white/90 mb-3 xs:hidden">
-              <span className="font-medium">{t("header.today")}: </span>
-              <span className="opacity-90">
-                {t("header.stats", {
-                  trips: stats.acceptedRequests,
-                  seats: stats.totalSeats,
-                })}
-              </span>
-            </div>
-          )}
 
           <div className="space-y-1 text-white/90">
             <p className="font-medium text-lg">{t("header.title")}</p>
