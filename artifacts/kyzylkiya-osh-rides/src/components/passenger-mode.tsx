@@ -83,6 +83,25 @@ function formatDateTimeShort(iso: string | null | undefined): string {
   });
 }
 
+function getApiErrorMessage(err: unknown): string | null {
+  if (!err || typeof err !== "object") return null;
+  const e = err as {
+    body?: unknown;
+    response?: { data?: unknown };
+    data?: unknown;
+    message?: string;
+  };
+  const candidates = [e.body, e.response?.data, e.data];
+  for (const c of candidates) {
+    if (c && typeof c === "object" && "message" in c) {
+      const m = (c as { message?: unknown }).message;
+      if (typeof m === "string" && m.trim()) return m.trim();
+    }
+  }
+  if (typeof e.message === "string" && e.message.trim()) return e.message.trim();
+  return null;
+}
+
 export function PassengerMode() {
   const { t, lang } = useTranslation();
   const [activeRequestId, setActiveRequestId] = useState<string | null>(() =>
@@ -248,10 +267,10 @@ export function PassengerMode() {
           description: t("passenger.toast.created.desc"),
         });
       },
-      onError: () => {
+      onError: (error) => {
         toast({
-          title: t("passenger.toast.error.title"),
-          description: t("passenger.toast.error.desc"),
+          title: getApiErrorMessage(error) ?? t("passenger.toast.error.title"),
+          description: getApiErrorMessage(error) ? undefined : t("passenger.toast.error.desc"),
           variant: "destructive",
         });
       },
