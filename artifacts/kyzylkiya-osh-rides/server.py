@@ -277,6 +277,44 @@ def register_telegram_user_login(session_record):
             pass
 
 
+def get_telegram_user_phone(telegram_user_id):
+    uid = str(telegram_user_id or "").strip()
+    if not uid:
+        return ""
+    with _telegram_registry_lock:
+        reg = _telegram_registry_load()
+        row = reg.get(uid)
+        if not isinstance(row, dict):
+            return ""
+        phone = str(row.get("phone", "")).strip()
+        return phone if re.fullmatch(r"\+996\d{9}", phone) else ""
+
+
+def upsert_telegram_user_phone(telegram_user_id, phone):
+    uid = str(telegram_user_id or "").strip()
+    normalized_phone = str(phone or "").strip()
+    if not uid or not re.fullmatch(r"\+996\d{9}", normalized_phone):
+        return
+    with _telegram_registry_lock:
+        reg = _telegram_registry_load()
+        row = reg.get(uid)
+        now = now_iso()
+        if not isinstance(row, dict):
+            row = {
+                "telegramUserId": uid,
+                "name": "",
+                "username": "",
+                "firstLoginAt": now,
+            }
+        row["phone"] = normalized_phone
+        row["lastLoginAt"] = now
+        reg[uid] = row
+        try:
+            _telegram_registry_save(reg)
+        except OSError:
+            pass
+
+
 restore_auth_state()
 
 
@@ -865,6 +903,11 @@ class RideHandler(BaseHTTPRequestHandler):
                     {"message": "Телефон +996 менен андан кийин 9 сан болушу керек"},
                 )
                 return
+            session_user = self._current_session_user()
+            if session_user and session_user.get("telegramUserId"):
+                session_user["phone"] = passenger_phone
+                upsert_telegram_user_phone(session_user.get("telegramUserId"), passenger_phone)
+                persist_auth_state()
             if len(notes) < 1:
                 self._send_json(400, {"message": "Кошумча эскертүү жазыңыз (үй номери, белги ж.б.)"})
                 return
@@ -916,10 +959,13 @@ class RideHandler(BaseHTTPRequestHandler):
             first = str(data.get("first_name", "")).strip()
             last = str(data.get("last_name", "")).strip()
             full_name = f"{first} {last}".strip() or str(data.get("username", "")).strip() or "Telegram user"
+            telegram_uid = str(data.get("id", "")).strip()
+            linked_phone = get_telegram_user_phone(telegram_uid)
             session = {
-                "id": str(data.get("id", "")).strip() or uuid.uuid4().hex,
+                "id": telegram_uid or uuid.uuid4().hex,
                 "name": full_name,
-                "telegramUserId": str(data.get("id", "")).strip(),
+                "phone": linked_phone,
+                "telegramUserId": telegram_uid,
                 "telegramChatId": "",
                 "username": str(data.get("username", "")).strip(),
                 "photoUrl": str(data.get("photo_url", "")).strip(),
@@ -1007,6 +1053,14 @@ class RideHandler(BaseHTTPRequestHandler):
             ):
                 self._send_json(400, {"message": "Алгач профилди толтуруңуз"})
                 return
+            if not re.fullmatch(r"\+996\d{9}", driver_phone):
+                self._send_json(400, {"message": "Телефон +996 менен андан кийин 9 сан болушу керек"})
+                return
+            session_user = self._current_session_user()
+            if session_user and session_user.get("telegramUserId"):
+                session_user["phone"] = driver_phone
+                upsert_telegram_user_phone(session_user.get("telegramUserId"), driver_phone)
+                persist_auth_state()
 
             for existing in offers_store:
                 if existing["status"] == "active" and existing.get("driverPhone") == driver_phone and existing.get("origin") == origin and existing.get("destination") == destination:
