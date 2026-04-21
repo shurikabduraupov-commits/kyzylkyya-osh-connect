@@ -334,6 +334,41 @@ def _search_nominatim(city, query):
     return []
 
 
+def _search_nominatim_structured(city, query):
+    """Street + city — works better than free-text q for capitals (e.g. Bishkek)."""
+    city = str(city or "").strip()
+    query = str(query or "").strip()
+    if not city or not query:
+        return []
+    params = urlencode(
+        {
+            "format": "jsonv2",
+            "addressdetails": "1",
+            "countrycodes": "kg",
+            "limit": "20",
+            "street": query,
+            "city": city,
+        }
+    )
+    headers = {
+        "Accept": "application/json",
+        "User-Agent": "KyzylKyya-Osh-Connect/1.0 (+https://github.com/shurikabduraupov-commits/kyzylkyya-osh-connect)",
+    }
+    bases = (
+        "https://nominatim.openstreetmap.org/search",
+        "https://nominatim.openstreetmap.de/search",
+    )
+    for base in bases:
+        try:
+            data = _http_get_json(f"{base}?{params}", headers, timeout=10)
+        except (HTTPError, URLError, TimeoutError, socket.timeout, json.JSONDecodeError, OSError):
+            continue
+        parsed = _nominatim_parse_items(data, query, city)
+        if parsed:
+            return parsed
+    return []
+
+
 def search_addresses(city, query):
     query = str(query or "").strip()
     city = str(city or "").strip()
@@ -342,6 +377,8 @@ def search_addresses(city, query):
     merged = _search_photon(city, query)
     if not merged:
         merged = _search_nominatim(city, query)
+    if not merged:
+        merged = _search_nominatim_structured(city, query)
     return merged
 
 

@@ -173,6 +173,9 @@ const CITY_COORDS: Record<string, [number, number]> = {
   "Новопавловка": [74.5333, 42.8500],
 };
 
+/** Overpass street index is capped; skip prefetch/search for these — use Photon + Nominatim. */
+const LARGE_CITIES_SKIP_LOCAL_OVERPASS = new Set(["Бишкек", "Ош"]);
+
 type OverpassElement = {
   type: string;
   id: number;
@@ -359,6 +362,7 @@ function getCityPlaces(city: string): Promise<NominatimSuggestion[]> {
 
 export function prefetchCityPlaces(city: string): void {
   if (!city) return;
+  if (LARGE_CITIES_SKIP_LOCAL_OVERPASS.has(city)) return;
   void getCityPlaces(city);
 }
 
@@ -542,6 +546,21 @@ function cityHasLocalStreetIndex(city: string): boolean {
   return Object.prototype.hasOwnProperty.call(CITY_COORDS, city);
 }
 
+function dedupeMergeSuggestions(groups: NominatimSuggestion[][]): NominatimSuggestion[] {
+  const seen = new Set<string>();
+  const out: NominatimSuggestion[] = [];
+  for (const group of groups) {
+    for (const s of group) {
+      const k = normSearch(primaryStreetStem(s.shortLabel));
+      if (!k || seen.has(k)) continue;
+      seen.add(k);
+      out.push(s);
+      if (out.length >= 28) return out;
+    }
+  }
+  return out;
+}
+
 function matchLocalPlaces(places: NominatimSuggestion[], trimmed: string): NominatimSuggestion[] {
   if (places.length === 0) return [];
   const needles = buildHaystacks(trimmed).map(normSearch).filter((n) => n.length > 0);
@@ -612,45 +631,59 @@ export async function searchNominatim({
   if (trimmed.length < 1) return [];
 
   const fallbackSearch = async (): Promise<NominatimSuggestion[]> => {
-    const params = new URLSearchParams();
-    params.set("q", trimmed);
-    params.set("city", city);
-    const resp = await fetch(apiUrl(`/rides-api/address-search?${params.toString()}`), { signal });
-    if (!resp.ok) return [];
-    const payload = await resp.json().catch(() => []);
-    if (!Array.isArray(payload)) return [];
-    return payload
-      .map((item) => ({
-        placeId: String(item?.placeId ?? ""),
-        displayName: String(item?.displayName ?? ""),
-        shortLabel: String(item?.shortLabel ?? ""),
-        category: String(item?.category ?? ""),
-        type: String(item?.type ?? ""),
-        lat: String(item?.lat ?? ""),
-        lon: String(item?.lon ?? ""),
-        searchTerms: Array.isArray(item?.searchTerms)
-          ? item.searchTerms.map((v: unknown) => String(v).toLowerCase())
-          : [],
-      }))
-      .filter((item) => item.placeId && item.shortLabel);
+    try {
+      const params = new URLSearchParams();
+      params.set("q", trimmed);
+      params.set("city", city);
+      const resp = await fetch(apiUrl(`/rides-api/address-search?${params.toString()}`), { signal });
+      if (!resp.ok) return [];
+      const payload = await resp.json().catch(() => []);
+      if (!Array.isArray(payload)) return [];
+      return payload
+        .map((item) => ({
+          placeId: String(item?.placeId ?? ""),
+          displayName: String(item?.displayName ?? ""),
+          shortLabel: String(item?.shortLabel ?? ""),
+          category: String(item?.category ?? ""),
+          type: String(item?.type ?? ""),
+          lat: String(item?.lat ?? ""),
+          lon: String(item?.lon ?? ""),
+          searchTerms: Array.isArray(item?.searchTerms)
+            ? item.searchTerms.map((v: unknown) => String(v).toLowerCase())
+            : [],
+        }))
+        .filter((item) => item.placeId && item.shortLabel);
+    } catch {
+      return [];
+    }
   };
 
+  const skipLocalOverpass = LARGE_CITIES_SKIP_LOCAL_OVERPASS.has(city);
+
+  if (skipLocalOverpass) {
+    if (signal?.aborted) return [];
+    const [fromPhoton, fromServer] = await Promise.all([
+      fetchPhotonBrowser(city, trimmed, signal),
+      fallbackSearch(),
+    ]);
+    if (signal?.aborted) return [];
+    const merged = dedupeMergeSuggestions([fromPhoton, fromServer]);
+    return merged.slice(0, 25);
+  }
+
+  let local: NominatimSuggestion[] = [];
   if (cityHasLocalStreetIndex(city)) {
     const places = await getCityPlaces(city);
     if (signal?.aborted) return [];
-    const local = matchLocalPlaces(places, trimmed);
-    if (local.length > 0) return local;
+    local = matchLocalPlaces(places, trimmed);
   }
 
   const fromPhoton = await fetchPhotonBrowser(city, trimmed, signal);
   if (signal?.aborted) return [];
-  if (fromPhoton.length > 0) return fromPhoton;
 
-  const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
-  if (apiBase) {
-    const fromServer = await fallbackSearch();
-    if (signal?.aborted) return [];
-    if (fromServer.length > 0) return fromServer;
+  const merged = dedupeMergeSuggestions([local, fromPhoton]);
+  if (merged.length > 0) {
+    return merged.slice(0, 25);
   }
 
   if (!cityHasLocalStreetIndex(city)) {
@@ -658,9 +691,11 @@ export async function searchNominatim({
     if (signal?.aborted) return [];
     if (places.length > 0) {
       const top = matchLocalPlaces(places, trimmed);
-      if (top.length > 0) return top;
+      if (top.length > 0) return top.slice(0, 25);
     }
   }
 
-  return fallbackSearch();
+  const fromServer = await fallbackSearch();
+  if (signal?.aborted) return [];
+  return fromServer.slice(0, 25);
 }
