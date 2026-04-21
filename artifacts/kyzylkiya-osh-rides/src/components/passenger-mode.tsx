@@ -185,20 +185,13 @@ export function PassengerMode() {
     if (/^\+996\d{9}$/.test(phone)) return phone;
     return null;
   }, []);
-  const profilePhonePrefill = useMemo(() => {
-    const fromPassenger = initialProfile.passengerPhone?.trim() ?? "";
-    if (/^\+996\d{9}$/.test(fromPassenger)) return fromPassenger;
-    const fromDriver = initialProfile.driverPhone?.trim() ?? "";
-    if (/^\+996\d{9}$/.test(fromDriver)) return fromDriver;
-    return null;
-  }, [initialProfile]);
   const form = useForm<CreateRideValues>({
     resolver: zodResolver(createRideSchema),
     defaultValues: {
       origin: initialProfile.lastOrigin || DEFAULT_ORIGIN,
       destination: initialProfile.lastDestination || DEFAULT_DESTINATION,
       pickupAddress: "",
-      passengerPhone: authPhonePrefill ?? profilePhonePrefill ?? KG_MOBILE_PREFIX,
+      passengerPhone: authPhonePrefill ?? KG_MOBILE_PREFIX,
       notes: "",
       seats: 1,
       departDay: "today",
@@ -215,7 +208,7 @@ export function PassengerMode() {
         ? fromArg
         : isValidKg996Phone(fromForm)
           ? fromForm
-          : authPhonePrefill ?? profilePhonePrefill ?? KG_MOBILE_PREFIX;
+          : authPhonePrefill ?? KG_MOBILE_PREFIX;
       form.reset({
         origin: initialProfile.lastOrigin || DEFAULT_ORIGIN,
         destination: initialProfile.lastDestination || DEFAULT_DESTINATION,
@@ -230,7 +223,6 @@ export function PassengerMode() {
     },
     [
       authPhonePrefill,
-      profilePhonePrefill,
       defaultDepartAfter,
       defaultDepartBefore,
       form,
