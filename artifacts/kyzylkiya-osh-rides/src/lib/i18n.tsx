@@ -34,6 +34,7 @@ const translations: Record<Language, Dict> = {
     "auth.phone.submit": "Кирүү",
     "auth.phone.submitting": "Текшерүү…",
     "auth.phone.error": "Телефон аркылуу кирүү мүмкүн болгон жок",
+    "auth.logout": "Чыгуу",
 
     "header.brand": "Ала Кет",
     "header.link.telegram": "Telegram бот",
@@ -321,6 +322,7 @@ const translations: Record<Language, Dict> = {
     "auth.phone.submit": "Войти",
     "auth.phone.submitting": "Проверяем…",
     "auth.phone.error": "Не удалось войти по номеру телефона",
+    "auth.logout": "Выйти",
 
     "header.brand": "Ала Кет",
     "header.link.telegram": "Бот в Telegram",

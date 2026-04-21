@@ -11,7 +11,7 @@ import { UserRound, CarFront, Languages, Loader2 } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "@/lib/i18n";
-import { readAuthUser, type AuthUser } from "@/lib/auth";
+import { clearAuthSession, readAuthUser, type AuthUser } from "@/lib/auth";
 import { useEffect, useState } from "react";
 import { apiUrl } from "@/lib/api-url";
 
@@ -97,6 +97,16 @@ export function Home() {
                   </p>
                 </div>
               )}
+              <button
+                type="button"
+                onClick={() => {
+                  clearAuthSession();
+                  setAuthUser(null);
+                }}
+                className="flex items-center gap-2 bg-white/15 hover:bg-white/25 active:bg-white/30 transition-colors backdrop-blur-sm rounded-full px-3 py-2 text-xs sm:text-sm font-bold tracking-wide"
+              >
+                {t("auth.logout")}
+              </button>
               <button
                 type="button"
                 onClick={toggle}
