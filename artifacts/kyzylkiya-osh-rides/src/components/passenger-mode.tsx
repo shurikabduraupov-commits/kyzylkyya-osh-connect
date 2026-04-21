@@ -1005,6 +1005,8 @@ export function PassengerMode() {
     </Card>
     )}
 
+    <ActiveDriversList origin={listOrigin} destination={listDestination} />
+
     <Card className="w-full shadow-sm border-border">
       <CardHeader className="pb-3">
         <CardTitle className="font-display text-xl font-bold">{t("passenger.history.title")}</CardTitle>
@@ -1045,8 +1047,6 @@ export function PassengerMode() {
         )}
       </CardContent>
     </Card>
-
-    <ActiveDriversList origin={listOrigin} destination={listDestination} />
     </div>
   );
 }
