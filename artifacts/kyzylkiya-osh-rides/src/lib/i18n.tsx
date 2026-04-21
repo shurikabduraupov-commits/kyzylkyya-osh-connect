@@ -35,6 +35,10 @@ const translations: Record<Language, Dict> = {
     "auth.phone.submitting": "Текшерүү…",
     "auth.phone.error": "Телефон аркылуу кирүү мүмкүн болгон жок",
     "auth.logout": "Чыгуу",
+    "auth.logout.confirm.title": "Чыгууну ырастайсызбы?",
+    "auth.logout.confirm.desc": "Бул түзмөктөгү аккаунт унутулат. Кайра кирүү үчүн Telegram аркылуу авторизация талап кылынат.",
+    "auth.logout.confirm.cancel": "Жокко чыгаруу",
+    "auth.logout.confirm.action": "Ооба, чыгуу",
 
     "header.brand": "Ала Кет",
     "header.link.telegram": "Telegram бот",
@@ -323,6 +327,10 @@ const translations: Record<Language, Dict> = {
     "auth.phone.submitting": "Проверяем…",
     "auth.phone.error": "Не удалось войти по номеру телефона",
     "auth.logout": "Выйти",
+    "auth.logout.confirm.title": "Подтвердить выход?",
+    "auth.logout.confirm.desc": "Сайт забудет аккаунт на этом устройстве. Для входа снова потребуется авторизация через Telegram.",
+    "auth.logout.confirm.cancel": "Отмена",
+    "auth.logout.confirm.action": "Да, выйти",
 
     "header.brand": "Ала Кет",
     "header.link.telegram": "Бот в Telegram",

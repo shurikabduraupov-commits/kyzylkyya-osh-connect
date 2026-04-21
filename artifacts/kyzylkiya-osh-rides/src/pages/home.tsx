@@ -10,6 +10,16 @@ import { TelegramAuthGate } from "@/components/telegram-auth-gate";
 import { UserRound, CarFront, Languages, Loader2 } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useTranslation } from "@/lib/i18n";
 import { clearAuthSession, readAuthUser, type AuthUser } from "@/lib/auth";
 import { useEffect, useState } from "react";
@@ -24,6 +34,7 @@ export function Home() {
   const [serverAuthRequired, setServerAuthRequired] = useState<boolean | null>(() =>
     viteAuthGate ? false : null,
   );
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (viteAuthGate) return;
@@ -99,10 +110,7 @@ export function Home() {
               )}
               <button
                 type="button"
-                onClick={() => {
-                  clearAuthSession();
-                  setAuthUser(null);
-                }}
+                onClick={() => setLogoutConfirmOpen(true)}
                 className="flex items-center gap-2 bg-white/15 hover:bg-white/25 active:bg-white/30 transition-colors backdrop-blur-sm rounded-full px-3 py-2 text-xs sm:text-sm font-bold tracking-wide"
               >
                 {t("auth.logout")}
@@ -186,6 +194,26 @@ export function Home() {
           </TabsContent>
         </Tabs>
       </main>
+
+      <AlertDialog open={logoutConfirmOpen} onOpenChange={setLogoutConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("auth.logout.confirm.title")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("auth.logout.confirm.desc")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("auth.logout.confirm.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                clearAuthSession();
+                setAuthUser(null);
+              }}
+            >
+              {t("auth.logout.confirm.action")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
