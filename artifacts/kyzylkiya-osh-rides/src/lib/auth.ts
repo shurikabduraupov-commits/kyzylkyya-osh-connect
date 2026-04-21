@@ -51,13 +51,24 @@ export type TelegramWidgetUser = {
   hash: string;
 };
 
-export async function getTelegramAuthConfig(): Promise<{ enabled: boolean; botUsername: string }> {
+export type TelegramAuthConfig = {
+  enabled: boolean;
+  botUsername: string;
+  openBotUrl: string;
+};
+
+export async function getTelegramAuthConfig(): Promise<TelegramAuthConfig> {
   const resp = await fetch(apiUrl("/rides-api/auth/telegram/config"));
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({}));
     throw new Error(err?.message || "Не удалось получить настройки Telegram входа");
   }
-  return await resp.json();
+  const data = (await resp.json()) as Partial<TelegramAuthConfig>;
+  return {
+    enabled: Boolean(data.enabled),
+    botUsername: String(data.botUsername ?? ""),
+    openBotUrl: String(data.openBotUrl ?? ""),
+  };
 }
 
 export async function completeTelegramWidgetLogin(user: TelegramWidgetUser): Promise<{ token: string; user: AuthUser }> {

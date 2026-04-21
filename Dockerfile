@@ -14,6 +14,9 @@ ENV CI=true
 # Partial monorepo in the image: full --frozen-lockfile fails (lockfile lists all workspace importers).
 RUN pnpm install --no-frozen-lockfile
 ENV NODE_ENV=production
+# Bake-time: set VITE_AUTH_ENABLED=true in Railway → Docker build args so the login screen is included.
+ARG VITE_AUTH_ENABLED=
+ENV VITE_AUTH_ENABLED=$VITE_AUTH_ENABLED
 # Railway often sets PORT="" during *build*; Vite config must see a valid port for that step.
 RUN env PORT=5173 NODE_OPTIONS=--max-old-space-size=3072 pnpm --filter @workspace/kyzylkiya-osh-rides run build
 

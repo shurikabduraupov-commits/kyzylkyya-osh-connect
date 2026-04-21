@@ -59,3 +59,7 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Telegram login registry (server-generated)
+artifacts/kyzylkiya-osh-rides/telegram_users.json
+artifacts/kyzylkiya-osh-rides/telegram_users.json.tmp

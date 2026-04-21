@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { setBaseUrl } from "@workspace/api-client-react";
+import { setBaseUrl, setAuthTokenGetter } from "@workspace/api-client-react";
+import { readAuthToken } from "@/lib/auth";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Home } from "@/pages/home";
@@ -45,6 +46,13 @@ function App() {
   useEffect(() => {
     const baseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
     setBaseUrl(baseUrl ? baseUrl : null);
+  }, []);
+  useEffect(() => {
+    if (import.meta.env.VITE_AUTH_ENABLED === "true") {
+      setAuthTokenGetter(() => readAuthToken());
+    } else {
+      setAuthTokenGetter(null);
+    }
   }, []);
   return (
     <QueryClientProvider client={queryClient}>

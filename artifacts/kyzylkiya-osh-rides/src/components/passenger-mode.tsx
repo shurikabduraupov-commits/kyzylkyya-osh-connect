@@ -20,7 +20,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, Users, CheckCircle2, Phone, Car, ArrowRight, Loader2, ListChecks, Star } from "lucide-react";
+import {
+  MapPin,
+  Users,
+  CheckCircle2,
+  Phone,
+  Car,
+  ArrowRight,
+  ArrowDownUp,
+  Loader2,
+  ListChecks,
+  Star,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DEFAULT_DESTINATION, DEFAULT_ORIGIN } from "@/lib/settlements";
 import { useAllSettlements } from "@/lib/all-settlements";
@@ -735,6 +746,26 @@ export function PassengerMode() {
                   );
                 }}
               />
+
+              <div className="flex justify-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 rounded-full border-primary/35 bg-background shadow-sm hover:bg-muted/70"
+                  aria-label={t("passenger.swap-cities.aria")}
+                  onClick={() => {
+                    const origin = form.getValues("origin");
+                    const destination = form.getValues("destination");
+                    form.setValue("origin", destination, { shouldValidate: true, shouldDirty: true });
+                    form.setValue("destination", origin, { shouldValidate: true, shouldDirty: true });
+                    form.setValue("pickupAddress", "", { shouldValidate: true });
+                  }}
+                >
+                  <ArrowDownUp className="h-4 w-4 shrink-0" aria-hidden />
+                  {t("passenger.swap-cities")}
+                </Button>
+              </div>
 
               <FormField
                 control={form.control}

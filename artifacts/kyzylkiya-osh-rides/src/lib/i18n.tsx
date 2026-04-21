@@ -12,6 +12,17 @@ const translations: Record<Language, Dict> = {
     "lang.ru": "РУС",
     "lang.toggle.aria": "Тилди алмаштыруу",
 
+    "auth.telegram.title": "Кирүү / катталуу",
+    "auth.telegram.lead":
+      "Кызматты колдонуу үчүн Telegram аккаунтыңыз менен бир жолу катталыңыз (кирүү). Бул сиздин Telegram IDңизди гана сактайт.",
+    "auth.telegram.step1": "1. Төмөндөгү баскыч менен ботту ачыңыз (керек болсо гана).",
+    "auth.telegram.step2": "2. Төмөндө Telegramдин расмий «Кирүү» баскычын басыңыз жана ырастаңыз.",
+    "auth.telegram.step3":
+      "3. Эгер баскыч көрүнбөсө: @BotFather → ботту тандаңыз → /setdomain → сайттын дарегин жазыңыз (мисалы, https://…railway.app).",
+    "auth.telegram.openBot": "Ботту Telegramде ачуу",
+    "auth.telegram.checking": "Текшерүү…",
+    "auth.telegram.notConfigured": "Серверде Telegram коюлган эмес (TELEGRAM_BOT_TOKEN).",
+
     "header.brand": "Ала Кет",
     "header.today": "Бүгүн",
     "header.stats": "{trips} сапар • {seats} орун",
@@ -27,6 +38,8 @@ const translations: Record<Language, Dict> = {
     "passenger.origin.placeholder": "Чыгуу пунктун тандаңыз",
     "passenger.destination.label": "Каякка барасыз?",
     "passenger.destination.placeholder": "Баруу пунктун тандаңыз",
+    "passenger.swap-cities": "Шаарларды алмаштыруу",
+    "passenger.swap-cities.aria": "Чыгуу жана баруу пункттарын алмаштыруу",
     "passenger.address.label": "Так кайсы жерден алып кетсин?",
     "passenger.address.placeholder": "көчө, объект же конкреттүү жер",
     "passenger.address.hint": "OpenStreetMap маалымат базасынан көчө/объект тандаңыз",
@@ -273,6 +286,17 @@ const translations: Record<Language, Dict> = {
     "lang.ru": "РУС",
     "lang.toggle.aria": "Сменить язык",
 
+    "auth.telegram.title": "Вход и регистрация",
+    "auth.telegram.lead":
+      "Чтобы пользоваться сервисом, один раз войдите через Telegram — это и есть регистрация: мы сохраняем только ваш Telegram ID и имя из профиля.",
+    "auth.telegram.step1": "1. При необходимости откройте бота кнопкой ниже.",
+    "auth.telegram.step2": "2. Нажмите официальную кнопку «Войти через Telegram» и подтвердите запрос.",
+    "auth.telegram.step3":
+      "3. Если кнопки нет: в @BotFather выберите бота → команда /setdomain → укажите адрес сайта (например https://…railway.app).",
+    "auth.telegram.openBot": "Открыть бота в Telegram",
+    "auth.telegram.checking": "Проверяем вход…",
+    "auth.telegram.notConfigured": "Вход через Telegram на сервере не настроен (нужен TELEGRAM_BOT_TOKEN).",
+
     "header.brand": "Ала Кет",
     "header.today": "Сегодня",
     "header.stats": "{trips} поездок • {seats} мест",
@@ -288,6 +312,8 @@ const translations: Record<Language, Dict> = {
     "passenger.origin.placeholder": "Выберите пункт отправления",
     "passenger.destination.label": "Куда едете?",
     "passenger.destination.placeholder": "Выберите пункт назначения",
+    "passenger.swap-cities": "Поменять города местами",
+    "passenger.swap-cities.aria": "Поменять местами откуда выезжаете и куда едете",
     "passenger.address.label": "Откуда именно забрать?",
     "passenger.address.placeholder": "улица, объект или конкретное место",
     "passenger.address.hint": "Выберите улицу или объект из базы OpenStreetMap",

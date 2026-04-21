@@ -12,6 +12,7 @@ import os
 import uuid
 import hashlib
 import hmac
+import threading
 
 _STATIC_ROOT = Path(
     os.environ.get(
@@ -28,6 +29,11 @@ SETTLEMENTS_FILE = os.path.join(os.path.dirname(__file__), "custom_settlements.j
 ADMIN_TOKEN = os.environ.get("MAK_ADMIN_TOKEN", "mak-admin-2026")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
 TELEGRAM_BOT_USERNAME = os.environ.get("TELEGRAM_BOT_USERNAME", "MAK_kg_bot").strip()
+TELEGRAM_USERS_FILE = (
+    os.environ.get("TELEGRAM_USERS_FILE", "").strip()
+    or os.path.join(os.path.dirname(os.path.abspath(__file__)), "telegram_users.json")
+)
+_telegram_registry_lock = threading.Lock()
 
 
 def _load_custom_settlements():
@@ -130,6 +136,50 @@ def verify_telegram_widget_auth(payload):
     secret_key = hashlib.sha256(TELEGRAM_BOT_TOKEN.encode("utf-8")).digest()
     calc_hash = hmac.new(secret_key, data_check_string.encode("utf-8"), hashlib.sha256).hexdigest()
     return hmac.compare_digest(calc_hash, incoming_hash)
+
+
+def _telegram_registry_load():
+    try:
+        with open(TELEGRAM_USERS_FILE, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+        return data if isinstance(data, dict) else {}
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return {}
+
+
+def _telegram_registry_save(reg):
+    tmp_path = TELEGRAM_USERS_FILE + ".tmp"
+    with open(tmp_path, "w", encoding="utf-8") as fh:
+        json.dump(reg, fh, ensure_ascii=False, indent=2)
+    os.replace(tmp_path, TELEGRAM_USERS_FILE)
+
+
+def register_telegram_user_login(session_record):
+    """Persist Telegram user id on each successful Login Widget auth (registration + return visits)."""
+    uid = str(session_record.get("telegramUserId", "")).strip()
+    if not uid:
+        return
+    now = now_iso()
+    with _telegram_registry_lock:
+        reg = _telegram_registry_load()
+        if uid in reg and isinstance(reg[uid], dict):
+            reg[uid]["lastLoginAt"] = now
+            reg[uid]["name"] = session_record.get("name", reg[uid].get("name", ""))
+            un = str(session_record.get("username", "")).strip()
+            if un:
+                reg[uid]["username"] = un
+        else:
+            reg[uid] = {
+                "telegramUserId": uid,
+                "name": str(session_record.get("name", "")).strip(),
+                "username": str(session_record.get("username", "")).strip(),
+                "firstLoginAt": now,
+                "lastLoginAt": now,
+            }
+        try:
+            _telegram_registry_save(reg)
+        except OSError:
+            pass
 
 
 def _http_get_json(url, headers, timeout=12):
@@ -588,16 +638,21 @@ class RideHandler(BaseHTTPRequestHandler):
                     "id": session["id"],
                     "name": session["name"],
                     "telegramUserId": session["telegramUserId"],
-                    "telegramChatId": session["telegramChatId"],
+                    "telegramChatId": session.get("telegramChatId", ""),
+                    "username": session.get("username", ""),
+                    "photoUrl": session.get("photoUrl", ""),
                 },
             )
             return
         if parts == ["auth", "telegram", "config"]:
+            bot_user = TELEGRAM_BOT_USERNAME.lstrip("@").strip()
+            open_bot = f"https://t.me/{bot_user}" if bot_user else ""
             self._send_json(
                 200,
                 {
-                    "enabled": bool(TELEGRAM_BOT_TOKEN and TELEGRAM_BOT_USERNAME),
-                    "botUsername": TELEGRAM_BOT_USERNAME,
+                    "enabled": bool(TELEGRAM_BOT_TOKEN and bot_user),
+                    "botUsername": bot_user,
+                    "openBotUrl": open_bot,
                 },
             )
             return
@@ -736,7 +791,16 @@ class RideHandler(BaseHTTPRequestHandler):
                 "createdAt": now_iso(),
             }
             auth_sessions[session_token] = session
-            self._send_json(200, {"token": session_token, "user": session})
+            register_telegram_user_login(session)
+            public_user = {
+                "id": session["id"],
+                "name": session["name"],
+                "telegramUserId": session["telegramUserId"],
+                "telegramChatId": session.get("telegramChatId", ""),
+                "username": session.get("username", ""),
+                "photoUrl": session.get("photoUrl", ""),
+            }
+            self._send_json(200, {"token": session_token, "user": public_user})
             return
         if parts == ["offers"]:
             origin = str(data.get("origin", "")).strip()
