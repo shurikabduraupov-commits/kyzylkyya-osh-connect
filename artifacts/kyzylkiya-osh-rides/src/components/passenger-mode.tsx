@@ -188,6 +188,38 @@ export function PassengerMode() {
     },
   });
 
+  const resetPassengerForm = useCallback(
+    (preferredPhone?: string | null) => {
+      const fromArg = (preferredPhone ?? "").trim();
+      const fromForm = form.getValues("passengerPhone")?.trim() ?? "";
+      const phone = isValidKg996Phone(fromArg)
+        ? fromArg
+        : isValidKg996Phone(fromForm)
+          ? fromForm
+          : authPhonePrefill ?? profilePhonePrefill ?? KG_MOBILE_PREFIX;
+      form.reset({
+        origin: initialProfile.lastOrigin || DEFAULT_ORIGIN,
+        destination: initialProfile.lastDestination || DEFAULT_DESTINATION,
+        pickupAddress: "",
+        passengerPhone: phone,
+        notes: "",
+        seats: 1,
+        departDay: "today",
+        departAfter: defaultDepartAfter,
+        departBefore: defaultDepartBefore,
+      });
+    },
+    [
+      authPhonePrefill,
+      profilePhonePrefill,
+      defaultDepartAfter,
+      defaultDepartBefore,
+      form,
+      initialProfile.lastDestination,
+      initialProfile.lastOrigin,
+    ],
+  );
+
   useEffect(() => {
     if (Object.keys(form.formState.errors).length > 0) {
       void form.trigger();
@@ -290,7 +322,7 @@ export function PassengerMode() {
         clearActiveRideRequestId();
         setActiveRequestId(null);
         setPreviousStatus(null);
-        form.reset();
+        resetPassengerForm(data.passengerPhone);
       },
       onError: () => {
         toast({
@@ -413,7 +445,7 @@ export function PassengerMode() {
       clearActiveRideRequestId();
       setActiveRequestId(null);
       setPreviousStatus(null);
-      form.reset();
+      resetPassengerForm(activeRequest.passengerPhone);
       queryClient.invalidateQueries({ queryKey: getListActiveDriversQueryKey() });
     } catch (e) {
       toast({
@@ -693,7 +725,7 @@ export function PassengerMode() {
                       clearActiveRideRequestId();
                       setActiveRequestId(null);
                       setPreviousStatus(null);
-                      form.reset();
+                      resetPassengerForm(activeRequest.passengerPhone);
                     }}
                   >
                     {t("passenger.rating.close")}

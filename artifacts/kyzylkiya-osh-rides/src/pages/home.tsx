@@ -21,7 +21,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useTranslation } from "@/lib/i18n";
-import { clearAuthSession, readAuthUser, type AuthUser } from "@/lib/auth";
+import {
+  clearAuthSession,
+  readAuthToken,
+  readAuthUser,
+  type AuthUser,
+  validateAuth,
+  writeAuthSession,
+  writeAuthUser,
+} from "@/lib/auth";
 import { useEffect, useState } from "react";
 import { apiUrl } from "@/lib/api-url";
 
@@ -52,6 +60,22 @@ export function Home() {
       cancelled = true;
     };
   }, [viteAuthGate]);
+
+  useEffect(() => {
+    const token = readAuthToken();
+    if (!token) return;
+    let cancelled = false;
+    void validateAuth().then((freshUser) => {
+      if (cancelled || !freshUser) return;
+      setAuthUser(freshUser);
+      // keep token untouched, refresh user snapshot from server
+      if (token) writeAuthSession(token, freshUser);
+      else writeAuthUser(freshUser);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const { data: stats } = useGetRideStats({
     query: {
