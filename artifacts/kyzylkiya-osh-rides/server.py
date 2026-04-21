@@ -12,6 +12,7 @@ import os
 import uuid
 import hashlib
 import hmac
+import base64
 import threading
 import time
 
@@ -43,6 +44,12 @@ TELEGRAM_USERS_FILE = (
     or os.path.join(os.path.dirname(os.path.abspath(__file__)), "telegram_users.json")
 )
 _telegram_registry_lock = threading.Lock()
+AUTH_TOKEN_SECRET = (
+    os.environ.get("AUTH_TOKEN_SECRET", "").strip()
+    or TELEGRAM_BOT_TOKEN
+    or ADMIN_TOKEN
+    or "mak-auth-fallback-secret"
+)
 
 
 def _env_truthy(name):
@@ -94,8 +101,61 @@ def _auth_public_user(session):
     }
 
 
+def _b64url_encode(raw_bytes):
+    return base64.urlsafe_b64encode(raw_bytes).decode("ascii").rstrip("=")
+
+
+def _b64url_decode(raw_text):
+    text = str(raw_text or "").strip()
+    if not text:
+        return b""
+    padding = "=" * (-len(text) % 4)
+    return base64.urlsafe_b64decode((text + padding).encode("ascii"))
+
+
+def _token_sign(payload_b64):
+    digest = hmac.new(
+        AUTH_TOKEN_SECRET.encode("utf-8"),
+        payload_b64.encode("ascii"),
+        hashlib.sha256,
+    ).digest()
+    return _b64url_encode(digest)
+
+
+def _issue_signed_token(session):
+    payload = {
+        "id": str(session.get("id", "")).strip(),
+        "name": str(session.get("name", "")).strip(),
+        "phone": str(session.get("phone", "")).strip(),
+        "telegramUserId": str(session.get("telegramUserId", "")).strip(),
+        "telegramChatId": str(session.get("telegramChatId", "")).strip(),
+        "username": str(session.get("username", "")).strip(),
+        "photoUrl": str(session.get("photoUrl", "")).strip(),
+        "iat": now_iso(),
+    }
+    payload_b64 = _b64url_encode(json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+    sig = _token_sign(payload_b64)
+    return f"v1.{payload_b64}.{sig}"
+
+
+def _read_signed_token(token):
+    try:
+        parts = str(token or "").split(".")
+        if len(parts) != 3 or parts[0] != "v1":
+            return None
+        payload_b64 = parts[1]
+        sig = parts[2]
+        expected_sig = _token_sign(payload_b64)
+        if not hmac.compare_digest(sig, expected_sig):
+            return None
+        payload_raw = _b64url_decode(payload_b64)
+        payload = json.loads(payload_raw.decode("utf-8"))
+        return payload if isinstance(payload, dict) else None
+    except Exception:
+        return None
+
+
 def issue_session(user_record):
-    token = uuid.uuid4().hex
     session = {
         "id": str(user_record.get("id", "")).strip() or uuid.uuid4().hex,
         "name": str(user_record.get("name", "")).strip(),
@@ -106,6 +166,7 @@ def issue_session(user_record):
         "photoUrl": str(user_record.get("photoUrl", "")).strip(),
         "createdAt": now_iso(),
     }
+    token = _issue_signed_token(session)
     auth_sessions[token] = session
     persist_auth_state()
     return token, session
@@ -712,6 +773,18 @@ class RideHandler(BaseHTTPRequestHandler):
         token = self._read_bearer_token()
         if not token:
             return None
+        signed_payload = _read_signed_token(token)
+        if isinstance(signed_payload, dict):
+            return {
+                "id": str(signed_payload.get("id", "")).strip(),
+                "name": str(signed_payload.get("name", "")).strip(),
+                "phone": str(signed_payload.get("phone", "")).strip(),
+                "telegramUserId": str(signed_payload.get("telegramUserId", "")).strip(),
+                "telegramChatId": str(signed_payload.get("telegramChatId", "")).strip(),
+                "username": str(signed_payload.get("username", "")).strip(),
+                "photoUrl": str(signed_payload.get("photoUrl", "")).strip(),
+                "createdAt": str(signed_payload.get("iat", "")).strip() or now_iso(),
+            }
         session = auth_sessions.get(token)
         return session if isinstance(session, dict) else None
 
@@ -1013,7 +1086,6 @@ class RideHandler(BaseHTTPRequestHandler):
             if not verify_telegram_widget_auth(data):
                 self._send_json(403, {"message": "Telegram авторизациясы текшерилген жок"})
                 return
-            session_token = uuid.uuid4().hex
             first = str(data.get("first_name", "")).strip()
             last = str(data.get("last_name", "")).strip()
             full_name = f"{first} {last}".strip() or str(data.get("username", "")).strip() or "Telegram user"
@@ -1029,8 +1101,7 @@ class RideHandler(BaseHTTPRequestHandler):
                 "photoUrl": str(data.get("photo_url", "")).strip(),
                 "createdAt": now_iso(),
             }
-            auth_sessions[session_token] = session
-            persist_auth_state()
+            session_token, session = issue_session(session)
             register_telegram_user_login(session)
             self._send_json(200, {"token": session_token, "user": _auth_public_user(session)})
             return
