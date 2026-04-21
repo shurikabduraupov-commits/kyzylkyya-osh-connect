@@ -28,7 +28,7 @@ auth_sessions = {}
 SETTLEMENTS_FILE = os.path.join(os.path.dirname(__file__), "custom_settlements.json")
 ADMIN_TOKEN = os.environ.get("MAK_ADMIN_TOKEN", "mak-admin-2026")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
-TELEGRAM_BOT_USERNAME = os.environ.get("TELEGRAM_BOT_USERNAME", "MAK_kg_bot").strip()
+TELEGRAM_BOT_USERNAME = os.environ.get("TELEGRAM_BOT_USERNAME", "alaket_kg_bot").strip()
 TELEGRAM_USERS_FILE = (
     os.environ.get("TELEGRAM_USERS_FILE", "").strip()
     or os.path.join(os.path.dirname(os.path.abspath(__file__)), "telegram_users.json")

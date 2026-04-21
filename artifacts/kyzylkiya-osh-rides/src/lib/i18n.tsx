@@ -24,6 +24,7 @@ const translations: Record<Language, Dict> = {
     "auth.telegram.notConfigured": "Серверде Telegram коюлган эмес (TELEGRAM_BOT_TOKEN).",
 
     "header.brand": "Ала Кет",
+    "header.link.telegram": "Telegram бот",
     "header.today": "Бүгүн",
     "header.stats": "{trips} сапар • {seats} орун",
     "header.title": "Кыргызстан боюнча сапарлар",
@@ -298,6 +299,7 @@ const translations: Record<Language, Dict> = {
     "auth.telegram.notConfigured": "Вход через Telegram на сервере не настроен (нужен TELEGRAM_BOT_TOKEN).",
 
     "header.brand": "Ала Кет",
+    "header.link.telegram": "Бот в Telegram",
     "header.today": "Сегодня",
     "header.stats": "{trips} поездок • {seats} мест",
     "header.title": "Поездки по Кыргызстану",
