@@ -139,7 +139,7 @@ export function PassengerMode() {
   const [previousStatus, setPreviousStatus] = useState<string | null>(null);
   const [ratingValue, setRatingValue] = useState<number>(5);
   const [isRatingSubmitting, setIsRatingSubmitting] = useState(false);
-  const { toast } = useToast();
+  const { toast, dismiss } = useToast();
   const queryClient = useQueryClient();
   const settlements = useAllSettlements();
 
@@ -325,11 +325,8 @@ export function PassengerMode() {
         if (isAuthError(error)) {
           savePassengerDraft(form.getValues());
           clearAuthSession();
+          dismiss();
           requestAuthLogin();
-          toast({
-            title: t("auth.required"),
-            variant: "destructive",
-          });
           return;
         }
         const roleConflictMessage = getRoleConflictErrorMessage(error, t);
@@ -554,12 +551,9 @@ export function PassengerMode() {
 
   const onSubmit = (data: CreateRideValues) => {
     if (!readAuthToken()) {
+      dismiss();
       requestAuthLogin();
       savePassengerDraft(data);
-      toast({
-        title: t("auth.required"),
-        variant: "destructive",
-      });
       return;
     }
     const { departDay, departAfter, departBefore, ...rest } = data;

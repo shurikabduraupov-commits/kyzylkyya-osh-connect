@@ -115,7 +115,7 @@ function isAuthError(err: unknown): boolean {
 
 export function DriverMode() {
   const { t, lang } = useTranslation();
-  const { toast } = useToast();
+  const { toast, dismiss } = useToast();
   const queryClient = useQueryClient();
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [progressUpdatingId, setProgressUpdatingId] = useState<string | null>(null);
@@ -423,11 +423,8 @@ export function DriverMode() {
         if (isAuthError(error)) {
           savePublishDraft(publishForm.getValues());
           clearAuthSession();
+          dismiss();
           requestAuthLogin();
-          toast({
-            title: t("auth.required"),
-            variant: "destructive",
-          });
           return;
         }
         const roleConflictMessage = getRoleConflictErrorMessage(error, t);
@@ -489,11 +486,8 @@ export function DriverMode() {
   const onPublishSubmit = (data: PublishValues) => {
     if (!readAuthToken()) {
       savePublishDraft(data);
+      dismiss();
       requestAuthLogin();
-      toast({
-        title: t("auth.required"),
-        variant: "destructive",
-      });
       return;
     }
     const { departDay, departAfter, departBefore, notes, ...rest } = data;
