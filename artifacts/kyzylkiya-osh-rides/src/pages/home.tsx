@@ -116,7 +116,16 @@ export function Home() {
                   {authUser.name}
                 </p>
               ) : null}
-              <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={toggle}
+                aria-label={t("lang.toggle.aria")}
+                className="flex items-center gap-2 bg-white/15 hover:bg-white/25 active:bg-white/30 transition-colors backdrop-blur-sm rounded-full px-4 py-2.5 text-sm font-bold tracking-wider"
+                data-testid="language-toggle"
+              >
+                <Languages className="w-5 h-5 shrink-0" />
+                <span>{lang === "kg" ? t("lang.kg") : t("lang.ru")}</span>
+              </button>
               {authUser ? (
                 <button
                   type="button"
@@ -134,17 +143,6 @@ export function Home() {
                   {t("auth.login")}
                 </button>
               )}
-              <button
-                type="button"
-                onClick={toggle}
-                aria-label={t("lang.toggle.aria")}
-                className="flex items-center gap-2 bg-white/15 hover:bg-white/25 active:bg-white/30 transition-colors backdrop-blur-sm rounded-full px-4 py-2.5 text-sm font-bold tracking-wider"
-                data-testid="language-toggle"
-              >
-                <Languages className="w-5 h-5 shrink-0" />
-                <span>{lang === "kg" ? t("lang.kg") : t("lang.ru")}</span>
-              </button>
-              </div>
             </div>
           </div>
 

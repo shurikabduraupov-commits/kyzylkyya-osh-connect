@@ -44,7 +44,7 @@ const translations: Record<Language, Dict> = {
     "auth.logout.confirm.action": "Ооба, чыгуу",
     "auth.required": "Авторизация талап кылынат. Telegram аркылуу кайра кириңиз.",
 
-    "header.brand": "Ала Кет",
+    "header.brand": "АлаКет",
     "header.link.telegram": "Telegram бот",
     "header.today": "Бүгүн",
     "header.stats": "{trips} сапар • {seats} орун",
@@ -348,7 +348,7 @@ const translations: Record<Language, Dict> = {
     "auth.logout.confirm.action": "Да, выйти",
     "auth.required": "Требуется авторизация. Войдите снова через Telegram.",
 
-    "header.brand": "Ала Кет",
+    "header.brand": "АлаКет",
     "header.link.telegram": "Бот в Telegram",
     "header.today": "Сегодня",
     "header.stats": "{trips} поездок • {seats} мест",
