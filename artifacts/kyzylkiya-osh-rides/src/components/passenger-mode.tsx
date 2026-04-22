@@ -139,7 +139,6 @@ export function PassengerMode() {
   const [previousStatus, setPreviousStatus] = useState<string | null>(null);
   const [ratingValue, setRatingValue] = useState<number>(5);
   const [isRatingSubmitting, setIsRatingSubmitting] = useState(false);
-  const [showAdvancedFields, setShowAdvancedFields] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const settlements = useAllSettlements();
@@ -978,156 +977,141 @@ export function PassengerMode() {
               />
             </div>
 
-            <div className="rounded-lg border border-border p-3 space-y-3 bg-muted/20">
-              <Button
-                type="button"
-                variant="ghost"
-                className="w-full justify-start px-2 h-9"
-                onClick={() => setShowAdvancedFields((v) => !v)}
-              >
-                {showAdvancedFields ? t("passenger.advanced.hide") : t("passenger.advanced.show")}
-              </Button>
-
-              {showAdvancedFields && (
-                <>
-                  <FormField
-                    control={form.control}
-                    name="pickupAddress"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-foreground">{t("passenger.address.label")}</FormLabel>
-                        <FormControl>
-                          <AddressAutocomplete
-                            value={field.value}
-                            onChange={field.onChange}
-                            city={form.watch("origin")}
-                            placeholder={t("passenger.address.placeholder")}
-                          />
-                        </FormControl>
-                        <p className="text-xs text-muted-foreground">{t("passenger.address.hint")}</p>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="notes"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-foreground">{t("passenger.notes.label")}</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder={t("passenger.notes.placeholder")}
-                            className="min-h-[80px] text-base resize-none"
-                            maxLength={500}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="passengerPhone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-foreground">{t("passenger.phone.label")}</FormLabel>
-                        <FormControl>
-                          <div className="flex rounded-md border border-input bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 ring-offset-background">
-                            <span className="flex items-center px-3 text-sm font-semibold text-muted-foreground border-r border-input bg-muted/40 shrink-0 select-none">
-                              {KG_MOBILE_PREFIX}
-                            </span>
-                            <Input
-                              className="h-12 text-base border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                              inputMode="numeric"
-                              autoComplete="tel-national"
-                              placeholder={t("passenger.phone.placeholder-digits")}
-                              maxLength={9}
-                              title={t("passenger.phone.hint-kg")}
-                              value={kg996Suffix(field.value)}
-                              onChange={(e) => {
-                                const d = e.target.value.replace(/\D/g, "").slice(0, 9);
-                                field.onChange(`${KG_MOBILE_PREFIX}${d}`);
-                              }}
-                              onBlur={field.onBlur}
-                              name={field.name}
-                              ref={field.ref}
-                            />
-                          </div>
-                        </FormControl>
-                        <p className="text-xs text-muted-foreground">
-                          {sessionTelegramId
-                            ? t("passenger.phone.hint-optional")
-                            : t("passenger.phone.hint-kg")}
-                        </p>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-foreground">{t("passenger.depart.label")}</p>
-                    <FormField
-                      control={form.control}
-                      name="departDay"
-                      render={({ field }) => (
-                        <div className="grid grid-cols-2 gap-2 p-1 bg-muted/50 rounded-lg">
-                          {(["today", "tomorrow"] as const).map((day) => (
-                            <button
-                              key={day}
-                              type="button"
-                              onClick={() => field.onChange(day)}
-                              className={`h-10 rounded-md text-sm font-medium transition-colors ${
-                                field.value === day
-                                  ? "bg-background shadow-sm text-foreground"
-                                  : "text-muted-foreground hover:text-foreground"
-                              }`}
-                            >
-                              {t(day === "today" ? "passenger.depart.today" : "passenger.depart.tomorrow")}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+            <FormField
+              control={form.control}
+              name="pickupAddress"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-foreground">{t("passenger.address.label")}</FormLabel>
+                  <FormControl>
+                    <AddressAutocomplete
+                      value={field.value}
+                      onChange={field.onChange}
+                      city={form.watch("origin")}
+                      placeholder={t("passenger.address.placeholder")}
                     />
-                    <div className="grid grid-cols-2 gap-3">
-                      <FormField
-                        control={form.control}
-                        name="departAfter"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs text-muted-foreground font-normal">
-                              {t("passenger.depart.from")}
-                            </FormLabel>
-                            <FormControl>
-                              <Input type="time" className="h-12 text-base" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="departBefore"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs text-muted-foreground font-normal">
-                              {t("passenger.depart.to")}
-                            </FormLabel>
-                            <FormControl>
-                              <Input type="time" className="h-12 text-base" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">{t("passenger.address.hint")}</p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-foreground">{t("passenger.notes.label")}</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder={t("passenger.notes.placeholder")}
+                      className="min-h-[80px] text-base resize-none"
+                      maxLength={500}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="passengerPhone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-foreground">{t("passenger.phone.label")}</FormLabel>
+                  <FormControl>
+                    <div className="flex rounded-md border border-input bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 ring-offset-background">
+                      <span className="flex items-center px-3 text-sm font-semibold text-muted-foreground border-r border-input bg-muted/40 shrink-0 select-none">
+                        {KG_MOBILE_PREFIX}
+                      </span>
+                      <Input
+                        className="h-12 text-base border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                        inputMode="numeric"
+                        autoComplete="tel-national"
+                        placeholder={t("passenger.phone.placeholder-digits")}
+                        maxLength={9}
+                        title={t("passenger.phone.hint-kg")}
+                        value={kg996Suffix(field.value)}
+                        onChange={(e) => {
+                          const d = e.target.value.replace(/\D/g, "").slice(0, 9);
+                          field.onChange(`${KG_MOBILE_PREFIX}${d}`);
+                        }}
+                        onBlur={field.onBlur}
+                        name={field.name}
+                        ref={field.ref}
                       />
                     </div>
-                    <p className="text-xs text-muted-foreground">{t("passenger.depart.hint")}</p>
-                  </div>
-                </>
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    {sessionTelegramId
+                      ? t("passenger.phone.hint-optional")
+                      : t("passenger.phone.hint-kg")}
+                  </p>
+                  <FormMessage />
+                </FormItem>
               )}
+            />
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-foreground">{t("passenger.depart.label")}</p>
+              <FormField
+                control={form.control}
+                name="departDay"
+                render={({ field }) => (
+                  <div className="grid grid-cols-2 gap-2 p-1 bg-muted/50 rounded-lg">
+                    {(["today", "tomorrow"] as const).map((day) => (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() => field.onChange(day)}
+                        className={`h-10 rounded-md text-sm font-medium transition-colors ${
+                          field.value === day
+                            ? "bg-background shadow-sm text-foreground"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {t(day === "today" ? "passenger.depart.today" : "passenger.depart.tomorrow")}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="departAfter"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs text-muted-foreground font-normal">
+                        {t("passenger.depart.from")}
+                      </FormLabel>
+                      <FormControl>
+                        <Input type="time" className="h-12 text-base" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="departBefore"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs text-muted-foreground font-normal">
+                        {t("passenger.depart.to")}
+                      </FormLabel>
+                      <FormControl>
+                        <Input type="time" className="h-12 text-base" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">{t("passenger.depart.hint")}</p>
             </div>
 
             <FormField

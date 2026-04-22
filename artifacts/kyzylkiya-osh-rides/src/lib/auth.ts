@@ -17,6 +17,7 @@ export const AUTH_LOGIN_REQUIRED_EVENT = "mak:auth-login-required";
 const LOGOUT_CLEAR_KEYS = [
   "mak.passenger.activeRequest.v1",
   "mak.passenger.draft.v1",
+  "mak.driver.publish.draft.v1",
   "mak.profile.v2",
   "mak.profile.v1",
   "mak.home.activeTab",

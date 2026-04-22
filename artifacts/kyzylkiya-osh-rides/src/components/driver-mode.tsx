@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -36,6 +36,7 @@ import { apiUrl } from "@/lib/api-url";
 import { Car } from "lucide-react";
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
+const DRIVER_PUBLISH_DRAFT_KEY = "mak.driver.publish.draft.v1";
 function toTimeInput(date: Date): string {
   return `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
 }
@@ -133,6 +134,8 @@ export function DriverMode() {
     }
     return profile;
   });
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const prevHasSavedProfileRef = useRef(isProfileComplete(savedProfile));
   const hasSavedProfile = isProfileComplete(savedProfile);
   const settlements = useAllSettlements();
 
@@ -270,17 +273,45 @@ export function DriverMode() {
 
   const defaultPubAfter = useMemo(() => toTimeInput(new Date(Date.now() + 30 * 60 * 1000)), []);
   const defaultPubBefore = useMemo(() => toTimeInput(new Date(Date.now() + 2 * 60 * 60 * 1000)), []);
+  const readPublishDraft = useCallback((): Partial<PublishValues> | null => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = localStorage.getItem(DRIVER_PUBLISH_DRAFT_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as Partial<PublishValues>;
+      return parsed && typeof parsed === "object" ? parsed : null;
+    } catch {
+      return null;
+    }
+  }, []);
+  const savePublishDraft = useCallback((data: Partial<PublishValues>) => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem(DRIVER_PUBLISH_DRAFT_KEY, JSON.stringify(data));
+    } catch {
+      // ignore quota/privacy errors
+    }
+  }, []);
+  const clearPublishDraft = useCallback(() => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.removeItem(DRIVER_PUBLISH_DRAFT_KEY);
+    } catch {
+      // ignore quota/privacy errors
+    }
+  }, []);
+  const initialPublishDraft = useMemo(() => readPublishDraft(), [readPublishDraft]);
 
   const publishForm = useForm<PublishValues>({
     resolver: zodResolver(publishSchema),
     defaultValues: {
-      origin: savedProfile.lastOrigin || "",
-      destination: savedProfile.lastDestination || "",
-      seats: savedProfile.carSeats || 4,
-      notes: "",
-      departDay: "today",
-      departAfter: defaultPubAfter,
-      departBefore: defaultPubBefore,
+      origin: initialPublishDraft?.origin ?? savedProfile.lastOrigin ?? "",
+      destination: initialPublishDraft?.destination ?? savedProfile.lastDestination ?? "",
+      seats: initialPublishDraft?.seats ?? savedProfile.carSeats ?? 4,
+      notes: initialPublishDraft?.notes ?? "",
+      departDay: initialPublishDraft?.departDay ?? "today",
+      departAfter: initialPublishDraft?.departAfter ?? defaultPubAfter,
+      departBefore: initialPublishDraft?.departBefore ?? defaultPubBefore,
     },
   });
 
@@ -359,6 +390,7 @@ export function DriverMode() {
   const createOfferMutation = useCreateDriverOffer({
     mutation: {
       onSuccess: () => {
+        clearPublishDraft();
         setIsPublishCollapsed(true);
         toast({
           title: t("driver.publish.toast.title"),
@@ -378,6 +410,7 @@ export function DriverMode() {
       },
       onError: (error) => {
         if (isAuthError(error)) {
+          savePublishDraft(publishForm.getValues());
           clearAuthSession();
           requestAuthLogin();
           toast({
@@ -444,6 +477,7 @@ export function DriverMode() {
 
   const onPublishSubmit = (data: PublishValues) => {
     if (!readAuthToken()) {
+      savePublishDraft(data);
       requestAuthLogin();
       toast({
         title: t("auth.required"),
@@ -738,6 +772,16 @@ export function DriverMode() {
     form.reset(profileToFormDefaults(savedProfile));
     setSelectedRequestId("__edit__");
   };
+
+  useEffect(() => {
+    const prev = prevHasSavedProfileRef.current;
+    if (!prev && hasSavedProfile) {
+      requestAnimationFrame(() => {
+        rootRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+      });
+    }
+    prevHasSavedProfileRef.current = hasSavedProfile;
+  }, [hasSavedProfile]);
 
   useEffect(() => {
     if (Object.keys(form.formState.errors).length > 0) {
@@ -1105,7 +1149,7 @@ export function DriverMode() {
   }
 
   return (
-    <div className="space-y-4">
+    <div ref={rootRef} className="space-y-4">
       <div className="flex items-center justify-between px-1">
         <h2 className="font-display font-bold text-xl">{t("driver.active.title")}</h2>
         <div className="flex items-center text-sm font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">
