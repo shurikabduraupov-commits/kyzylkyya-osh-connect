@@ -19,6 +19,8 @@ const translations: Record<Language, Dict> = {
     "auth.telegram.step2":
       "2. Эгер баскыч көрүнбөсө: @BotFather → ботту тандаңыз → /setdomain → сайттын дарегин жазыңыз (мисалы, https://…railway.app).",
     "auth.telegram.step3": "3. Кирүү биринчи жолу гана талап кылынышы мүмкүн: андан кийин сессия сакталат.",
+    "auth.telegram.securityNote":
+      "Telegram аркылуу катталуу сиздин коопсуздугуңуз үчүн керек: жасалма аккаунттарды азайтып, заказдагы эки тарапты коргойт.",
     "auth.telegram.openBot": "Ботту Telegramде ачуу",
     "auth.telegram.checking": "Текшерүү…",
     "auth.telegram.notConfigured": "Серверде Telegram коюлган эмес (TELEGRAM_BOT_TOKEN).",
@@ -35,6 +37,7 @@ const translations: Record<Language, Dict> = {
     "auth.phone.submitting": "Текшерүү…",
     "auth.phone.error": "Телефон аркылуу кирүү мүмкүн болгон жок",
     "auth.logout": "Чыгуу",
+    "auth.login": "Telegram менен кирүү",
     "auth.logout.confirm.title": "Чыгууну ырастайсызбы?",
     "auth.logout.confirm.desc": "Бул түзмөктөгү аккаунт унутулат. Кайра кирүү үчүн Telegram аркылуу авторизация талап кылынат.",
     "auth.logout.confirm.cancel": "Жокко чыгаруу",
@@ -320,6 +323,8 @@ const translations: Record<Language, Dict> = {
     "auth.telegram.step2":
       "2. Если кнопки нет: в @BotFather выберите бота → команда /setdomain → укажите адрес сайта (например https://…railway.app).",
     "auth.telegram.step3": "3. Обычно вход нужен только первый раз: потом сессия сохраняется.",
+    "auth.telegram.securityNote":
+      "Регистрация через Telegram нужна для вашей безопасности: это снижает фейковые аккаунты и защищает обе стороны поездки.",
     "auth.telegram.openBot": "Открыть бота в Telegram",
     "auth.telegram.checking": "Проверяем вход…",
     "auth.telegram.notConfigured": "Вход через Telegram на сервере не настроен (нужен TELEGRAM_BOT_TOKEN).",
@@ -336,6 +341,7 @@ const translations: Record<Language, Dict> = {
     "auth.phone.submitting": "Проверяем…",
     "auth.phone.error": "Не удалось войти по номеру телефона",
     "auth.logout": "Выйти",
+    "auth.login": "Войти через Telegram",
     "auth.logout.confirm.title": "Подтвердить выход?",
     "auth.logout.confirm.desc": "Сайт забудет аккаунт на этом устройстве. Для входа снова потребуется авторизация через Telegram.",
     "auth.logout.confirm.cancel": "Отмена",

@@ -29,7 +29,7 @@ import { useAllSettlements } from "@/lib/all-settlements";
 import { SettlementCombobox } from "@/components/settlement-combobox";
 import { useTranslation } from "@/lib/i18n";
 import { readProfile, updateProfile, isProfileComplete } from "@/lib/profile";
-import { clearAuthSession, readAuthUser } from "@/lib/auth";
+import { clearAuthSession, readAuthToken, readAuthUser, requestAuthLogin } from "@/lib/auth";
 import { alertWarning } from "@/lib/alerts";
 import { KG_MOBILE_PREFIX, isValidKg996Phone, kg996Suffix } from "@/lib/phone-kg";
 import { apiUrl } from "@/lib/api-url";
@@ -370,6 +370,7 @@ export function DriverMode() {
       onError: (error) => {
         if (isAuthError(error)) {
           clearAuthSession();
+          requestAuthLogin();
           toast({
             title: t("auth.required"),
             variant: "destructive",
@@ -425,6 +426,14 @@ export function DriverMode() {
   };
 
   const onPublishSubmit = (data: PublishValues) => {
+    if (!readAuthToken()) {
+      requestAuthLogin();
+      toast({
+        title: t("auth.required"),
+        variant: "destructive",
+      });
+      return;
+    }
     const { departDay, departAfter, departBefore, notes, ...rest } = data;
     updateProfile({ lastOrigin: data.origin, lastDestination: data.destination });
     createOfferMutation.mutate({

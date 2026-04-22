@@ -7,7 +7,7 @@ import {
 import { PassengerMode } from "@/components/passenger-mode";
 import { DriverMode } from "@/components/driver-mode";
 import { TelegramAuthGate } from "@/components/telegram-auth-gate";
-import { UserRound, CarFront, Languages, Loader2 } from "lucide-react";
+import { UserRound, CarFront, Languages } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useTranslation } from "@/lib/i18n";
 import {
+  AUTH_LOGIN_REQUIRED_EVENT,
   AUTH_SESSION_CLEARED_EVENT,
   clearAuthSession,
   readAuthToken,
@@ -32,35 +33,13 @@ import {
   writeAuthUser,
 } from "@/lib/auth";
 import { useEffect, useState } from "react";
-import { apiUrl } from "@/lib/api-url";
 
 export function Home() {
   const { t, lang, toggle } = useTranslation();
   const queryClient = useQueryClient();
-  const viteAuthGate = import.meta.env.VITE_AUTH_ENABLED === "true";
   const [authUser, setAuthUser] = useState<AuthUser | null>(() => readAuthUser());
-  /** null = ещё грузим с сервера; false/true — ответ /rides-api/auth/settings */
-  const [serverAuthRequired, setServerAuthRequired] = useState<boolean | null>(() =>
-    viteAuthGate ? false : null,
-  );
+  const [authGateOpen, setAuthGateOpen] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
-
-  useEffect(() => {
-    if (viteAuthGate) return;
-    let cancelled = false;
-    void fetch(apiUrl("/rides-api/auth/settings"))
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("settings"))))
-      .then((data: { authRequired?: unknown }) => {
-        if (cancelled) return;
-        setServerAuthRequired(Boolean(data?.authRequired));
-      })
-      .catch(() => {
-        if (!cancelled) setServerAuthRequired(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [viteAuthGate]);
 
   useEffect(() => {
     const token = readAuthToken();
@@ -82,9 +61,14 @@ export function Home() {
     const onSessionCleared = () => {
       setAuthUser(null);
     };
+    const onLoginRequired = () => {
+      setAuthGateOpen(true);
+    };
     window.addEventListener(AUTH_SESSION_CLEARED_EVENT, onSessionCleared);
+    window.addEventListener(AUTH_LOGIN_REQUIRED_EVENT, onLoginRequired);
     return () => {
       window.removeEventListener(AUTH_SESSION_CLEARED_EVENT, onSessionCleared);
+      window.removeEventListener(AUTH_LOGIN_REQUIRED_EVENT, onLoginRequired);
     };
   }, []);
 
@@ -95,21 +79,15 @@ export function Home() {
     },
   });
 
-  const hasToken = !!readAuthToken();
-  const showAuthGate = (!authUser || !hasToken) && (viteAuthGate || serverAuthRequired === true);
-  const waitingAuthSettings = !viteAuthGate && serverAuthRequired === null;
-
-  if (waitingAuthSettings) {
+  if (authGateOpen) {
     return (
-      <div className="min-h-[100dvh] flex flex-col items-center justify-center gap-3 bg-background text-muted-foreground">
-        <Loader2 className="h-9 w-9 animate-spin text-primary" aria-hidden />
-        <p className="text-sm">{t("auth.settings.loading")}</p>
-      </div>
+      <TelegramAuthGate
+        onSuccess={(user) => {
+          setAuthUser(user);
+          setAuthGateOpen(false);
+        }}
+      />
     );
-  }
-
-  if (showAuthGate) {
-    return <TelegramAuthGate onSuccess={setAuthUser} />;
   }
 
   return (
@@ -139,13 +117,23 @@ export function Home() {
                 </p>
               ) : null}
               <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setLogoutConfirmOpen(true)}
-                className="flex items-center gap-2 bg-white/15 hover:bg-white/25 active:bg-white/30 transition-colors backdrop-blur-sm rounded-full px-3 py-2 text-xs sm:text-sm font-bold tracking-wide"
-              >
-                {t("auth.logout")}
-              </button>
+              {authUser ? (
+                <button
+                  type="button"
+                  onClick={() => setLogoutConfirmOpen(true)}
+                  className="flex items-center gap-2 bg-white/15 hover:bg-white/25 active:bg-white/30 transition-colors backdrop-blur-sm rounded-full px-3 py-2 text-xs sm:text-sm font-bold tracking-wide"
+                >
+                  {t("auth.logout")}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setAuthGateOpen(true)}
+                  className="flex items-center gap-2 bg-white/15 hover:bg-white/25 active:bg-white/30 transition-colors backdrop-blur-sm rounded-full px-3 py-2 text-xs sm:text-sm font-bold tracking-wide"
+                >
+                  {t("auth.login")}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={toggle}

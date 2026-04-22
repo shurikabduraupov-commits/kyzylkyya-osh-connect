@@ -42,7 +42,7 @@ import { useTranslation } from "@/lib/i18n";
 import { readProfile, updateProfile } from "@/lib/profile";
 import { prefetchCityPlaces } from "@/lib/nominatim";
 import { alertSuccess, alertWarning, ensureNotificationPermission, primeAudio } from "@/lib/alerts";
-import { clearAuthSession, readAuthToken, readAuthUser } from "@/lib/auth";
+import { clearAuthSession, readAuthToken, readAuthUser, requestAuthLogin } from "@/lib/auth";
 import {
   clearActiveRideRequestId,
   readActiveRideRequestId,
@@ -282,6 +282,7 @@ export function PassengerMode() {
       onError: (error) => {
         if (isAuthError(error)) {
           clearAuthSession();
+          requestAuthLogin();
           toast({
             title: t("auth.required"),
             variant: "destructive",
@@ -501,6 +502,14 @@ export function PassengerMode() {
   };
 
   const onSubmit = (data: CreateRideValues) => {
+    if (!readAuthToken()) {
+      requestAuthLogin();
+      toast({
+        title: t("auth.required"),
+        variant: "destructive",
+      });
+      return;
+    }
     const { departDay, departAfter, departBefore, ...rest } = data;
     const trimmedPhone = rest.passengerPhone.trim();
     const phoneForApi = isValidKg996Phone(trimmedPhone) ? trimmedPhone : "";

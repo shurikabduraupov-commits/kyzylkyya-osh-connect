@@ -101,6 +101,10 @@ export function TelegramAuthGate({ onSuccess }: Props) {
             <li className="text-muted-foreground">{t("auth.telegram.step3")}</li>
           </ol>
 
+          <p className="text-xs rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-foreground/85 leading-relaxed">
+            {t("auth.telegram.securityNote")}
+          </p>
+
           <p className="text-xs text-muted-foreground leading-relaxed border-t border-border pt-3">
             {t("auth.telegram.menuButtonHint")}
           </p>
