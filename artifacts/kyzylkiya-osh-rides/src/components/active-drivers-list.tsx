@@ -78,7 +78,9 @@ export function ActiveDriversList({ origin, destination }: Props) {
           </p>
         ) : (
           <div className="space-y-2">
-            {filtered.slice(0, 20).map((d) => (
+            {filtered.slice(0, 20).map((d) => {
+              const isRouteMatch = !canFilter || (d.origin === origin && d.destination === destination);
+              return (
               <div
                 key={d.driverPhone}
                 className="border border-border rounded-xl p-3 bg-card hover-elevate"
@@ -159,19 +161,24 @@ export function ActiveDriversList({ origin, destination }: Props) {
                     </p>
                   </div>
                   <Button
-                    asChild
+                    type="button"
                     size="sm"
                     variant="outline"
                     className="h-9 shrink-0"
+                    disabled={!isRouteMatch}
+                    onClick={() => {
+                      if (!isRouteMatch) return;
+                      window.open(`tel:${d.driverPhone}`, "_self");
+                    }}
+                    title={!isRouteMatch ? t("driver.error.offer-route-mismatch") : undefined}
                   >
-                    <a href={`tel:${d.driverPhone}`}>
-                      <Phone className="w-4 h-4 mr-1" />
-                      {t("passenger.drivers.call")}
-                    </a>
+                    <Phone className="w-4 h-4 mr-1" />
+                    {t("passenger.drivers.call")}
                   </Button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </CardContent>

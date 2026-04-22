@@ -558,32 +558,61 @@ export function DriverMode() {
     return t("driver.progress.assigned");
   };
 
-  const renderPassengerContact = (ride: RideRequest) => {
+  const renderPassengerContact = (ride: RideRequest, disabled = false) => {
     if (ride.passengerPhone) {
       return (
-        <Button asChild type="button" variant="outline" size="sm" className="h-9 w-full">
-          <a href={`tel:${ride.passengerPhone}`}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-9 w-full"
+          disabled={disabled}
+          onClick={() => {
+            if (disabled) return;
+            window.open(`tel:${ride.passengerPhone}`, "_self");
+          }}
+          title={disabled ? t("driver.error.offer-route-mismatch") : undefined}
+        >
             <Phone className="w-4 h-4 mr-1.5" />
             {t("passenger.drivers.call")}
-          </a>
         </Button>
       );
     }
     const un = (ride.passengerTelegramUsername ?? "").replace(/^@/, "").trim();
     if (un) {
       return (
-        <Button asChild type="button" variant="outline" size="sm" className="h-9 w-full">
-          <a href={`https://t.me/${un}`} target="_blank" rel="noopener noreferrer">
-            {t("driver.card.write-telegram")} @{un}
-          </a>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-9 w-full"
+          disabled={disabled}
+          onClick={() => {
+            if (disabled) return;
+            window.open(`https://t.me/${un}`, "_blank", "noopener,noreferrer");
+          }}
+          title={disabled ? t("driver.error.offer-route-mismatch") : undefined}
+        >
+          {t("driver.card.write-telegram")} @{un}
         </Button>
       );
     }
     const uid = (ride.passengerTelegramUserId ?? "").trim();
     if (uid) {
       return (
-        <Button asChild type="button" variant="outline" size="sm" className="h-9 w-full">
-          <a href={`tg://user?id=${uid}`}>{t("driver.card.open-telegram")}</a>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-9 w-full"
+          disabled={disabled}
+          onClick={() => {
+            if (disabled) return;
+            window.open(`tg://user?id=${uid}`, "_self");
+          }}
+          title={disabled ? t("driver.error.offer-route-mismatch") : undefined}
+        >
+          {t("driver.card.open-telegram")}
         </Button>
       );
     }
@@ -1579,7 +1608,9 @@ export function DriverMode() {
                   </div>
                 </div>
                 <div className="px-5 pb-5">
-                  <div className="mb-2">{renderPassengerContact(request)}</div>
+                  <div className="mb-2">
+                    {renderPassengerContact(request, !canAcceptByOfferRoute(request.origin, request.destination))}
+                  </div>
                   <Button
                     className="w-full font-semibold shadow-none"
                     variant="default"
