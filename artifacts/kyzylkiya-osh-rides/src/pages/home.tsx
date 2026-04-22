@@ -47,6 +47,7 @@ export function Home() {
   const queryClient = useQueryClient();
   const [authUser, setAuthUser] = useState<AuthUser | null>(() => readAuthUser());
   const [authGateOpen, setAuthGateOpen] = useState(false);
+  const [showReloginHint, setShowReloginHint] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<HomeTab>(() => {
     if (typeof window === "undefined") return "passenger";
@@ -75,6 +76,7 @@ export function Home() {
       setAuthUser(null);
     };
     const onLoginRequired = () => {
+      setShowReloginHint(true);
       setAuthGateOpen(true);
     };
     window.addEventListener(AUTH_SESSION_CLEARED_EVENT, onSessionCleared);
@@ -151,8 +153,10 @@ export function Home() {
   if (authGateOpen) {
     return (
       <TelegramAuthGate
+        showReloginHint={showReloginHint}
         onSuccess={(user) => {
           setAuthUser(user);
+          setShowReloginHint(false);
           setAuthGateOpen(false);
         }}
       />
@@ -206,7 +210,10 @@ export function Home() {
               ) : (
                 <button
                   type="button"
-                  onClick={() => setAuthGateOpen(true)}
+                  onClick={() => {
+                    setShowReloginHint(false);
+                    setAuthGateOpen(true);
+                  }}
                   className="flex items-center gap-2 bg-white/15 hover:bg-white/25 active:bg-white/30 transition-colors backdrop-blur-sm rounded-full px-3 py-2 text-xs sm:text-sm font-bold tracking-wide"
                 >
                   {t("auth.login")}

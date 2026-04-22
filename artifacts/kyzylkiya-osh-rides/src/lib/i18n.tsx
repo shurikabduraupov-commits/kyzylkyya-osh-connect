@@ -43,6 +43,7 @@ const translations: Record<Language, Dict> = {
     "auth.logout.confirm.cancel": "Жокко чыгаруу",
     "auth.logout.confirm.action": "Ооба, чыгуу",
     "auth.required": "Авторизация талап кылынат. Telegram аркылуу кайра кириңиз.",
+    "auth.relogin.hint": "Сессия аяктады. Улантуу үчүн Telegram аркылуу кайра кириңиз.",
 
     "header.brand": "АлаКет",
     "header.link.telegram": "Telegram бот",
@@ -360,6 +361,7 @@ const translations: Record<Language, Dict> = {
     "auth.logout.confirm.cancel": "Отмена",
     "auth.logout.confirm.action": "Да, выйти",
     "auth.required": "Требуется авторизация. Войдите снова через Telegram.",
+    "auth.relogin.hint": "Сессия завершилась. Чтобы продолжить, войдите снова через Telegram.",
 
     "header.brand": "АлаКет",
     "header.link.telegram": "Бот в Telegram",

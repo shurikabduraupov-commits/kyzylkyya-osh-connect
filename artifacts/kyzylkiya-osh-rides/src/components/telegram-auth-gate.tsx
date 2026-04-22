@@ -12,9 +12,10 @@ import { Languages } from "lucide-react";
 
 type Props = {
   onSuccess: (user: AuthUser) => void;
+  showReloginHint?: boolean;
 };
 
-export function TelegramAuthGate({ onSuccess }: Props) {
+export function TelegramAuthGate({ onSuccess, showReloginHint = false }: Props) {
   const { t, lang, toggle } = useTranslation();
   const widgetRootRef = useRef<HTMLDivElement | null>(null);
   const [isBusy, setIsBusy] = useState(false);
@@ -94,6 +95,11 @@ export function TelegramAuthGate({ onSuccess }: Props) {
             <h1 className="text-xl font-bold font-display">{t("auth.telegram.title")}</h1>
             <p className="text-sm text-muted-foreground leading-relaxed">{t("auth.telegram.lead")}</p>
           </div>
+          {showReloginHint ? (
+            <p className="text-sm rounded-md border border-border bg-muted/50 px-3 py-2 text-foreground/85 leading-relaxed">
+              {t("auth.relogin.hint")}
+            </p>
+          ) : null}
 
           <ol className="text-sm text-foreground/90 space-y-2 list-decimal pl-4 leading-relaxed">
             <li>{t("auth.telegram.step1")}</li>
