@@ -66,7 +66,6 @@ export function TelegramAuthGate({ onSuccess }: Props) {
     script.setAttribute("data-size", "large");
     script.setAttribute("data-radius", "8");
     script.setAttribute("data-userpic", "false");
-    script.setAttribute("data-request-access", "write");
     script.setAttribute("data-onauth", "onTelegramAuth(user)");
     widgetRootRef.current.appendChild(script);
     return () => {
