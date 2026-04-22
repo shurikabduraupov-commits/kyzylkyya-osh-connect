@@ -250,6 +250,19 @@ def expire_stale_entities():
         offer["cancelledAt"] = now_iso()
 
 
+def passenger_owns_ride(session_user, ride, passenger_phone_req):
+    """Passenger release/rate: match by phone or Telegram session."""
+    req_phone = str(passenger_phone_req or "").strip()
+    stored = str(ride.get("passengerPhone", "")).strip()
+    if req_phone and stored and req_phone == stored:
+        return True
+    if not isinstance(session_user, dict):
+        return False
+    sess_tid = str(session_user.get("telegramUserId", "")).strip()
+    ride_tid = str(ride.get("passengerTelegramUserId", "")).strip()
+    return bool(sess_tid and ride_tid and sess_tid == ride_tid)
+
+
 def hit_rate_limit(actor_key, action, cooldown_sec):
     key = f"{action}:{actor_key}"
     now = time.time()
@@ -975,7 +988,17 @@ class RideHandler(BaseHTTPRequestHandler):
             origin = str(data.get("origin", "")).strip()
             destination = str(data.get("destination", "")).strip()
             pickup_address = str(data.get("pickupAddress", "")).strip()
-            passenger_phone = str(data.get("passengerPhone", "")).strip()
+            passenger_phone_raw = str(data.get("passengerPhone", "")).strip()
+            if re.fullmatch(r"\+996\d{9}", passenger_phone_raw):
+                passenger_phone = passenger_phone_raw
+            elif passenger_phone_raw in ("", "+996"):
+                passenger_phone = ""
+            else:
+                self._send_json(
+                    400,
+                    {"message": "Телефон +996 менен андан кийин 9 сан болушу керек"},
+                )
+                return
             notes = str(data.get("notes", "")).strip()
             if len(notes) > 500:
                 notes = notes[:500]
@@ -1020,22 +1043,27 @@ class RideHandler(BaseHTTPRequestHandler):
             if len(pickup_address) < 3:
                 self._send_json(400, {"message": "Так даректи жазыңыз"})
                 return
-            if not re.fullmatch(r"\+996\d{9}", passenger_phone):
-                self._send_json(
-                    400,
-                    {"message": "Телефон +996 менен андан кийин 9 сан болушу керек"},
-                )
-                return
+            if not passenger_phone:
+                tg_uid = str(session_user.get("telegramUserId", "")).strip() if session_user else ""
+                if not tg_uid:
+                    self._send_json(
+                        400,
+                        {"message": "Телефон жазыңыз же Telegram аркылуу кирүү керек"},
+                    )
+                    return
             actor_key = (
                 str(session_user.get("id", "")).strip()
                 if session_user and str(session_user.get("id", "")).strip()
-                else passenger_phone
+                else (
+                    passenger_phone
+                    or (str(session_user.get("telegramUserId", "")).strip() if session_user else "")
+                )
             )
             retry_after = hit_rate_limit(actor_key, "create_request", REQUEST_CREATE_COOLDOWN_SEC)
             if retry_after > 0:
                 self._send_json(429, {"message": f"Өтө бат жөнөтүлдү. {retry_after} сек күтүңүз."})
                 return
-            if session_user and session_user.get("telegramUserId"):
+            if session_user and session_user.get("telegramUserId") and passenger_phone:
                 session_user["phone"] = passenger_phone
                 upsert_telegram_user_phone(session_user.get("telegramUserId"), passenger_phone)
                 persist_auth_state()
@@ -1045,12 +1073,16 @@ class RideHandler(BaseHTTPRequestHandler):
             if seats_number < 1 or seats_number > 7:
                 self._send_json(400, {"message": "Орундардын саны 1ден 7ге чейин болушу керек"})
                 return
+            ptid = str(session_user.get("telegramUserId", "")).strip() if session_user else ""
+            puser = str(session_user.get("username", "")).strip() if session_user else ""
             ride = {
                 "id": uuid.uuid4().hex,
                 "origin": origin,
                 "destination": destination,
                 "pickupAddress": pickup_address,
                 "passengerPhone": passenger_phone,
+                "passengerTelegramUserId": ptid,
+                "passengerTelegramUsername": puser or None,
                 "notes": notes or None,
                 "seats": seats_number,
                 "route": make_route(origin, destination),
@@ -1302,17 +1334,12 @@ class RideHandler(BaseHTTPRequestHandler):
                 return
             driver_phone_req = str(data.get("driverPhone", "")).strip()
             passenger_phone_req = str(data.get("passengerPhone", "")).strip()
-            stored_passenger = str(ride.get("passengerPhone", "")).strip()
             allowed_driver = bool(
                 driver_phone_req
                 and ride.get("driverPhone")
                 and driver_phone_req == ride["driverPhone"]
             )
-            allowed_passenger = bool(
-                passenger_phone_req
-                and stored_passenger
-                and passenger_phone_req == stored_passenger
-            )
+            allowed_passenger = passenger_owns_ride(self._current_session_user(), ride, passenger_phone_req)
             if not allowed_driver and not allowed_passenger:
                 self._send_json(403, {"message": "Бул операция үчүн уруксат жок"})
                 return
@@ -1354,7 +1381,7 @@ class RideHandler(BaseHTTPRequestHandler):
                 self._send_json(409, {"message": "Бул заказ али аяктай элек"})
                 return
             passenger_phone_req = str(data.get("passengerPhone", "")).strip()
-            if not passenger_phone_req or passenger_phone_req != str(ride.get("passengerPhone", "")).strip():
+            if not passenger_owns_ride(self._current_session_user(), ride, passenger_phone_req):
                 self._send_json(403, {"message": "Бул операция үчүн уруксат жок"})
                 return
             if ride.get("passengerRating") is not None:

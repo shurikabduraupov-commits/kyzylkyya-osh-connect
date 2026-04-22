@@ -66,6 +66,8 @@ const translations: Record<Language, Dict> = {
     "passenger.phone.placeholder": "+996 555 000 000",
     "passenger.phone.placeholder-digits": "000000000",
     "passenger.phone.hint-kg": "Так 9 сан киргизиңиз (мисалы: 555123456).",
+    "passenger.phone.hint-optional":
+      "Телефонду кошуу сунушталат (айдоочу сизге чалат). Telegram менен кирген болсоңуз, бош калтырып коюуга болот — ошондо байланыш Telegram аркылуу көрсөтүлөт.",
     "passenger.notes.label": "Кошумча эскертүү (милдеттүү)",
     "passenger.notes.placeholder": "мисалы: үй номери, көрүнгөн белги, жүк бар",
     "passenger.seats.label": "Канча орун керек?",
@@ -130,7 +132,8 @@ const translations: Record<Language, Dict> = {
     "passenger.history.title": "Сапар тарыхы",
     "passenger.history.subtitle": "Сиз аяктаган сапарлар",
     "passenger.history.empty": "Азырынча аяктаган сапар жок",
-    "passenger.history.need-phone": "Тарыхты көрүү үчүн телефон номерин толук киргизиңиз",
+    "passenger.history.need-phone":
+      "Тарыхты көрүү үчүн телефонду формада толук жазыңыз же Telegram аркылуу кириңиз",
     "passenger.history.repeat": "Кайталап түзүү",
     "driver.mine.title": "Кабыл алган заказдарым",
     "driver.mine.empty": "Азырынча заказ жок",
@@ -212,6 +215,8 @@ const translations: Record<Language, Dict> = {
     "driver.card.address": "Алып кетүү дареги",
     "driver.card.seats": "{n} орун",
     "driver.card.accept": "Заявканы кабыл алуу",
+    "driver.card.write-telegram": "Жазуу Telegram",
+    "driver.card.open-telegram": "Ачуу Telegram",
 
     "driver.dialog.title": "Заявканы кабыл алуу",
     "driver.dialog.desc": "Жүргүнчү сизди табышы үчүн маалыматыңызды жазыңыз.",
@@ -362,6 +367,8 @@ const translations: Record<Language, Dict> = {
     "passenger.phone.placeholder": "+996 555 000 000",
     "passenger.phone.placeholder-digits": "000000000",
     "passenger.phone.hint-kg": "Введите строго 9 цифр номера (пример: 555123456).",
+    "passenger.phone.hint-optional":
+      "Телефон желателен, чтобы водитель мог вам позвонить. Если вы вошли через Telegram, поле можно оставить пустым — тогда связь через Telegram.",
     "passenger.notes.label": "Дополнительная заметка (обязательно)",
     "passenger.notes.placeholder": "например: номер дома, ориентир, есть багаж",
     "passenger.seats.label": "Сколько мест нужно?",
@@ -426,7 +433,8 @@ const translations: Record<Language, Dict> = {
     "passenger.history.title": "История поездок",
     "passenger.history.subtitle": "Ваши завершенные поездки",
     "passenger.history.empty": "Пока нет завершенных поездок",
-    "passenger.history.need-phone": "Чтобы видеть историю, введите полный номер телефона",
+    "passenger.history.need-phone":
+      "Чтобы видеть историю, введите полный номер в форме или войдите через Telegram",
     "passenger.history.repeat": "Повторить заявку",
     "driver.mine.title": "Мои принятые заказы",
     "driver.mine.empty": "Пока нет принятых заказов",
@@ -508,6 +516,8 @@ const translations: Record<Language, Dict> = {
     "driver.card.address": "Адрес посадки",
     "driver.card.seats": "{n} мест",
     "driver.card.accept": "Принять заявку",
+    "driver.card.write-telegram": "Написать в Telegram",
+    "driver.card.open-telegram": "Открыть в Telegram",
 
     "driver.dialog.title": "Принять заявку",
     "driver.dialog.desc": "Введите ваши данные, чтобы пассажир мог вас найти.",

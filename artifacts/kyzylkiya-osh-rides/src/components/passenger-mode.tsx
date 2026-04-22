@@ -42,7 +42,7 @@ import { useTranslation } from "@/lib/i18n";
 import { readProfile, updateProfile } from "@/lib/profile";
 import { prefetchCityPlaces } from "@/lib/nominatim";
 import { alertSuccess, alertWarning, ensureNotificationPermission, primeAudio } from "@/lib/alerts";
-import { clearAuthSession, readAuthUser } from "@/lib/auth";
+import { clearAuthSession, readAuthToken, readAuthUser } from "@/lib/auth";
 import {
   clearActiveRideRequestId,
   readActiveRideRequestId,
@@ -114,8 +114,15 @@ function isAuthError(err: unknown): boolean {
   return text.includes("авторизация") || text.includes("session") || text.includes("сессия");
 }
 
+function isPassengerPhoneSkipped(value: string, telegramUserId: string | undefined) {
+  if (!telegramUserId) return false;
+  const digits = kg996Suffix(value).replace(/\D/g, "");
+  return digits.length === 0;
+}
+
 export function PassengerMode() {
   const { t, lang } = useTranslation();
+  const sessionTelegramId = readAuthUser()?.telegramUserId;
   const [activeRequestId, setActiveRequestId] = useState<string | null>(() =>
     typeof window !== "undefined" ? readActiveRideRequestId() : null,
   );
@@ -133,9 +140,10 @@ export function PassengerMode() {
           origin: z.string().min(2, t("passenger.error.origin")),
           destination: z.string().min(2, t("passenger.error.destination")),
           pickupAddress: z.string().min(3, t("passenger.error.address")),
-          passengerPhone: z
-            .string()
-            .refine((v) => isValidKg996Phone(v), { message: t("passenger.error.phone-kg") }),
+          passengerPhone: z.string().refine(
+            (v) => isValidKg996Phone(v) || isPassengerPhoneSkipped(v, sessionTelegramId),
+            { message: t("passenger.error.phone-kg") },
+          ),
           notes: z.string().min(1, t("passenger.error.notes-required")).max(500, t("passenger.error.notes")),
           seats: z.coerce.number().min(1).max(7),
           departDay: z.enum(["today", "tomorrow"]),
@@ -177,7 +185,7 @@ export function PassengerMode() {
             path: ["departBefore"],
           },
         ),
-    [t],
+    [t, sessionTelegramId],
   );
 
   type CreateRideValues = z.infer<typeof createRideSchema>;
@@ -458,9 +466,13 @@ export function PassengerMode() {
     if (!activeRequestId || !activeRequest) return;
     setIsRatingSubmitting(true);
     try {
+      const token = readAuthToken();
       const resp = await fetch(apiUrl(`/rides-api/requests/${activeRequestId}/rate`), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           passengerPhone: activeRequest.passengerPhone,
           rating: ratingValue,
@@ -490,9 +502,11 @@ export function PassengerMode() {
 
   const onSubmit = (data: CreateRideValues) => {
     const { departDay, departAfter, departBefore, ...rest } = data;
+    const trimmedPhone = rest.passengerPhone.trim();
+    const phoneForApi = isValidKg996Phone(trimmedPhone) ? trimmedPhone : "";
     const payload = {
       ...rest,
-      passengerPhone: rest.passengerPhone.trim(),
+      passengerPhone: phoneForApi,
       notes: rest.notes.trim(),
       departAfter: combineDateTime(departDay, departAfter).toISOString(),
       departBefore: combineDateTime(departDay, departBefore).toISOString(),
@@ -500,7 +514,6 @@ export function PassengerMode() {
     updateProfile({
       lastOrigin: data.origin,
       lastDestination: data.destination,
-      passengerPhone: data.passengerPhone.trim(),
     });
     createMutation.mutate({ data: payload });
   };
@@ -512,7 +525,8 @@ export function PassengerMode() {
   const listOrigin = activeRequest?.origin ?? watchOrigin;
   const listDestination = activeRequest?.destination ?? watchDestination;
   const historyPhone = activeRequest?.passengerPhone ?? watchPassengerPhone;
-  const canLoadHistory = isValidKg996Phone(historyPhone ?? "");
+  const canLoadHistory =
+    isValidKg996Phone(historyPhone ?? "") || Boolean(sessionTelegramId);
   const { data: allRequests = [] } = useListRideRequests({
     query: {
       enabled: canLoadHistory,
@@ -521,7 +535,12 @@ export function PassengerMode() {
     },
   });
   const passengerHistory = allRequests
-    .filter((r) => r.status === "completed" && r.passengerPhone === historyPhone)
+    .filter((r) => {
+      if (r.status !== "completed") return false;
+      if (isValidKg996Phone(historyPhone ?? "") && r.passengerPhone === historyPhone) return true;
+      if (sessionTelegramId && r.passengerTelegramUserId === sessionTelegramId) return true;
+      return false;
+    })
     .slice(0, 20);
 
   const repeatFromHistory = (ride: (typeof passengerHistory)[number]) => {
@@ -737,7 +756,7 @@ export function PassengerMode() {
               </div>
             </div>
           )}
-          {(activeRequest?.status as string) === "completed" && (
+          {activeRequest && activeRequest.status === "completed" ? (
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-primary font-semibold">
                 <CheckCircle2 className="w-5 h-5 shrink-0" />
@@ -790,7 +809,7 @@ export function PassengerMode() {
                 </div>
               )}
             </div>
-          )}
+          ) : null}
         </CardContent>
       </Card>
     )}
@@ -941,9 +960,7 @@ export function PassengerMode() {
                         inputMode="numeric"
                         autoComplete="tel-national"
                         placeholder={t("passenger.phone.placeholder-digits")}
-                        minLength={9}
                         maxLength={9}
-                        pattern="\d{9}"
                         title={t("passenger.phone.hint-kg")}
                         value={kg996Suffix(field.value)}
                         onChange={(e) => {
@@ -956,7 +973,11 @@ export function PassengerMode() {
                       />
                     </div>
                   </FormControl>
-                  <p className="text-xs text-muted-foreground">{t("passenger.phone.hint-kg")}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {sessionTelegramId
+                      ? t("passenger.phone.hint-optional")
+                      : t("passenger.phone.hint-kg")}
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}

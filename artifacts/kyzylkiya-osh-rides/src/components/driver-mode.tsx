@@ -549,6 +549,38 @@ export function DriverMode() {
     return t("driver.progress.assigned");
   };
 
+  const renderPassengerContact = (ride: RideRequest) => {
+    if (ride.passengerPhone) {
+      return (
+        <Button asChild type="button" variant="outline" size="sm" className="h-9 w-full">
+          <a href={`tel:${ride.passengerPhone}`}>
+            <Phone className="w-4 h-4 mr-1.5" />
+            {t("passenger.drivers.call")}
+          </a>
+        </Button>
+      );
+    }
+    const un = (ride.passengerTelegramUsername ?? "").replace(/^@/, "").trim();
+    if (un) {
+      return (
+        <Button asChild type="button" variant="outline" size="sm" className="h-9 w-full">
+          <a href={`https://t.me/${un}`} target="_blank" rel="noopener noreferrer">
+            {t("driver.card.write-telegram")} @{un}
+          </a>
+        </Button>
+      );
+    }
+    const uid = (ride.passengerTelegramUserId ?? "").trim();
+    if (uid) {
+      return (
+        <Button asChild type="button" variant="outline" size="sm" className="h-9 w-full">
+          <a href={`tg://user?id=${uid}`}>{t("driver.card.open-telegram")}</a>
+        </Button>
+      );
+    }
+    return null;
+  };
+
   const confirmAndHandleProgressUpdate = (
     rideId: string,
     current: "assigned" | "en_route" | "arrived" | "in_trip" | "completed" | null,
@@ -1304,20 +1336,7 @@ export function DriverMode() {
                       {ride.notes}
                     </p>
                   )}
-                  {ride.passengerPhone && (
-                    <Button
-                      asChild
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-9 w-full"
-                    >
-                      <a href={`tel:${ride.passengerPhone}`}>
-                        <Phone className="w-4 h-4 mr-1.5" />
-                        {t("passenger.drivers.call")}
-                      </a>
-                    </Button>
-                  )}
+                  {renderPassengerContact(ride)}
                   <Select
                     value={(ride.rideProgress as "assigned" | "en_route" | "arrived" | "in_trip" | "completed" | null) ?? "assigned"}
                     onValueChange={(value) =>
@@ -1551,19 +1570,7 @@ export function DriverMode() {
                   </div>
                 </div>
                 <div className="px-5 pb-5">
-                  {request.passengerPhone && (
-                    <Button
-                      asChild
-                      type="button"
-                      variant="outline"
-                      className="w-full h-10 mb-2"
-                    >
-                      <a href={`tel:${request.passengerPhone}`}>
-                        <Phone className="w-4 h-4 mr-1.5" />
-                        {t("passenger.drivers.call")}
-                      </a>
-                    </Button>
-                  )}
+                  <div className="mb-2">{renderPassengerContact(request)}</div>
                   <Button
                     className="w-full font-semibold shadow-none"
                     variant="default"

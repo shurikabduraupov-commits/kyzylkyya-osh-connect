@@ -251,7 +251,7 @@ components:
         - status
     RideStatus:
       type: string
-      enum: [active, accepted, cancelled]
+      enum: [active, accepted, cancelled, completed]
     CreateRideRequest:
       type: object
       properties:
@@ -266,9 +266,9 @@ components:
           minLength: 3
         passengerPhone:
           type: string
-          pattern: "^\\+996\\d{9}$"
-          minLength: 13
-          maxLength: 13
+          description: >-
+            Кыргызстан форматы +996 жана 9 сан. Бош калышы мүмкүн гана Telegram аркылуу
+            авторизацияланган колдонуучу үчүн (сервер текшерет).
         notes:
           type: string
           maxLength: 500
@@ -286,7 +286,6 @@ components:
         - origin
         - destination
         - pickupAddress
-        - passengerPhone
         - seats
         - departAfter
         - departBefore
@@ -356,6 +355,12 @@ components:
           type: string
         passengerPhone:
           type: string
+        passengerTelegramUserId:
+          type: string
+          description: Telegram user id (when заявка без телефона)
+        passengerTelegramUsername:
+          type: string
+          nullable: true
         notes:
           type: string
           nullable: true
@@ -406,6 +411,32 @@ components:
           format: date-time
           nullable: true
         cancelledAt:
+          type: string
+          format: date-time
+          nullable: true
+        rideProgress:
+          type: string
+          nullable: true
+          enum: [assigned, en_route, arrived, in_trip, completed]
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        passengerRating:
+          type: integer
+          nullable: true
+          minimum: 1
+          maximum: 5
+        ratedAt:
+          type: string
+          format: date-time
+          nullable: true
+        driverPassengerRating:
+          type: integer
+          nullable: true
+          minimum: 1
+          maximum: 5
+        driverRatedAt:
           type: string
           format: date-time
           nullable: true

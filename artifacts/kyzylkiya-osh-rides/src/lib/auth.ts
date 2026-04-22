@@ -14,7 +14,7 @@ const AUTH_TOKEN_KEY = "mak.auth.token";
 const AUTH_USER_KEY = "mak.auth.user";
 export const AUTH_SESSION_CLEARED_EVENT = "mak:auth-session-cleared";
 
-function authHeaders() {
+function authHeaders(): Record<string, string> {
   const token = readAuthToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
