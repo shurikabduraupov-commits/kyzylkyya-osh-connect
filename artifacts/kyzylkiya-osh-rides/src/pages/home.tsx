@@ -34,12 +34,20 @@ import {
 } from "@/lib/auth";
 import { useEffect, useState } from "react";
 
+type HomeTab = "passenger" | "driver";
+const HOME_TAB_STORAGE_KEY = "mak.home.activeTab";
+
 export function Home() {
   const { t, lang, toggle } = useTranslation();
   const queryClient = useQueryClient();
   const [authUser, setAuthUser] = useState<AuthUser | null>(() => readAuthUser());
   const [authGateOpen, setAuthGateOpen] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<HomeTab>(() => {
+    if (typeof window === "undefined") return "passenger";
+    const stored = localStorage.getItem(HOME_TAB_STORAGE_KEY);
+    return stored === "driver" ? "driver" : "passenger";
+  });
 
   useEffect(() => {
     const token = readAuthToken();
@@ -155,9 +163,16 @@ export function Home() {
 
       <main className="flex-1 max-w-md mx-auto w-full px-4 -mt-4 relative z-20 pb-12">
         <Tabs
-          defaultValue="passenger"
+          value={activeTab}
           className="w-full"
           onValueChange={(value) => {
+            const next = value === "driver" ? "driver" : "passenger";
+            setActiveTab(next);
+            try {
+              localStorage.setItem(HOME_TAB_STORAGE_KEY, next);
+            } catch {
+              // ignore quota / privacy errors
+            }
             if (value === "passenger") {
               void queryClient.invalidateQueries({
                 queryKey: getListActiveDriversQueryKey(),
