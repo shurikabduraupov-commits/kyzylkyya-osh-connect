@@ -103,6 +103,15 @@ function getApiErrorMessage(err: unknown): string | null {
   return null;
 }
 
+function getRoleConflictErrorMessage(err: unknown, t: (key: string) => string): string | null {
+  const raw = getApiErrorMessage(err);
+  if (!raw) return null;
+  const text = raw.toLowerCase();
+  if (text.includes("активдүү айдоочу")) return t("role-lock.driver-active");
+  if (text.includes("активдүү жүргүнчү")) return t("role-lock.passenger-active");
+  return null;
+}
+
 function isAuthError(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
   const e = err as { status?: unknown; body?: unknown; message?: unknown };
@@ -319,6 +328,14 @@ export function PassengerMode() {
           requestAuthLogin();
           toast({
             title: t("auth.required"),
+            variant: "destructive",
+          });
+          return;
+        }
+        const roleConflictMessage = getRoleConflictErrorMessage(error, t);
+        if (roleConflictMessage) {
+          toast({
+            title: roleConflictMessage,
             variant: "destructive",
           });
           return;

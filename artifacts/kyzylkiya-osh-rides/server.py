@@ -327,6 +327,39 @@ def cancel_active_offers_for_driver(driver_phone):
     return n
 
 
+def has_active_passenger_role(session_user, passenger_phone):
+    """True when user already has an active/accepted passenger request."""
+    phone = str(passenger_phone or "").strip()
+    session_tid = str((session_user or {}).get("telegramUserId", "")).strip() if isinstance(session_user, dict) else ""
+    for ride in requests_store:
+        if ride.get("status") not in ("active", "accepted"):
+            continue
+        ride_phone = str(ride.get("passengerPhone", "")).strip()
+        ride_tid = str(ride.get("passengerTelegramUserId", "")).strip()
+        if phone and ride_phone and phone == ride_phone:
+            return True
+        if session_tid and ride_tid and session_tid == ride_tid:
+            return True
+    return False
+
+
+def has_active_driver_role(driver_phone):
+    """True when driver has active offer or accepted ride."""
+    phone = str(driver_phone or "").strip()
+    if not phone:
+        return False
+    has_offer = any(
+        offer.get("status") == "active" and str(offer.get("driverPhone", "")).strip() == phone
+        for offer in offers_store
+    )
+    if has_offer:
+        return True
+    return any(
+        ride.get("status") == "accepted" and str(ride.get("driverPhone", "")).strip() == phone
+        for ride in requests_store
+    )
+
+
 def verify_telegram_widget_auth(payload):
     if not TELEGRAM_BOT_TOKEN:
         return False
@@ -1051,6 +1084,14 @@ class RideHandler(BaseHTTPRequestHandler):
                         {"message": "Телефон жазыңыз же Telegram аркылуу кирүү керек"},
                     )
                     return
+            session_phone = str(session_user.get("phone", "")).strip() if session_user else ""
+            driver_identity_phone = session_phone or passenger_phone
+            if has_active_driver_role(driver_identity_phone):
+                self._send_json(
+                    409,
+                    {"message": "Сизде активдүү айдоочу жарыясы же сапары бар. Адегенде аны аяктап же токтотуңуз."},
+                )
+                return
             actor_key = (
                 str(session_user.get("id", "")).strip()
                 if session_user and str(session_user.get("id", "")).strip()
@@ -1217,6 +1258,12 @@ class RideHandler(BaseHTTPRequestHandler):
                 return
             if not re.fullmatch(r"\+996\d{9}", driver_phone):
                 self._send_json(400, {"message": "Телефон +996 менен андан кийин 9 сан болушу керек"})
+                return
+            if has_active_passenger_role(session_user, driver_phone):
+                self._send_json(
+                    409,
+                    {"message": "Сизде активдүү жүргүнчү заявкасы бар. Адегенде аны аяктап же жокко чыгарыңыз."},
+                )
                 return
             actor_key = (
                 str(session_user.get("id", "")).strip()
@@ -1456,6 +1503,12 @@ class RideHandler(BaseHTTPRequestHandler):
                 return
             if len(driver_phone) < 5:
                 self._send_json(400, {"message": "Айдоочунун телефонун жазыңыз"})
+                return
+            if has_active_passenger_role(self._current_session_user(), driver_phone):
+                self._send_json(
+                    409,
+                    {"message": "Сизде активдүү жүргүнчү заявкасы бар. Адегенде аны аяктап же жокко чыгарыңыз."},
+                )
                 return
             if driver_age is None or driver_age < 18 or driver_age > 80:
                 self._send_json(400, {"message": "Жашыңызды туура жазыңыз"})

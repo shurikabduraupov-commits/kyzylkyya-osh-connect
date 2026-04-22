@@ -91,6 +91,15 @@ function getApiErrorMessage(err: unknown): string | null {
   return null;
 }
 
+function getRoleConflictErrorMessage(err: unknown, t: (key: string) => string): string | null {
+  const raw = getApiErrorMessage(err);
+  if (!raw) return null;
+  const text = raw.toLowerCase();
+  if (text.includes("активдүү айдоочу")) return t("role-lock.driver-active");
+  if (text.includes("активдүү жүргүнчү")) return t("role-lock.passenger-active");
+  return null;
+}
+
 function isAuthError(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
   const e = err as { status?: unknown; body?: unknown; message?: unknown };
@@ -377,6 +386,14 @@ export function DriverMode() {
           });
           return;
         }
+        const roleConflictMessage = getRoleConflictErrorMessage(error, t);
+        if (roleConflictMessage) {
+          toast({
+            title: roleConflictMessage,
+            variant: "destructive",
+          });
+          return;
+        }
         setIsPublishCollapsed(false);
         toast({
           title: getApiErrorMessage(error) ?? t("driver.publish.error"),
@@ -652,10 +669,11 @@ export function DriverMode() {
         queryClient.invalidateQueries({ queryKey: getListRideRequestsQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetRideStatsQueryKey() });
       },
-      onError: () => {
+      onError: (error) => {
+        const roleConflictMessage = getRoleConflictErrorMessage(error, t);
         toast({
-          title: t("driver.toast.error.title"),
-          description: t("driver.toast.error.desc"),
+          title: roleConflictMessage ?? t("driver.toast.error.title"),
+          description: roleConflictMessage ? undefined : t("driver.toast.error.desc"),
           variant: "destructive",
         });
       },

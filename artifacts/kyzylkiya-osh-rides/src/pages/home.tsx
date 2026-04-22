@@ -1,8 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetRideStats,
+  useListDriverOffers,
+  useListRideRequests,
   getGetRideStatsQueryKey,
   getListActiveDriversQueryKey,
+  getListDriverOffersQueryKey,
+  getListRideRequestsQueryKey,
 } from "@workspace/api-client-react";
 import { PassengerMode } from "@/components/passenger-mode";
 import { DriverMode } from "@/components/driver-mode";
@@ -32,7 +36,8 @@ import {
   writeAuthSession,
   writeAuthUser,
 } from "@/lib/auth";
-import { useEffect, useState } from "react";
+import { readProfile } from "@/lib/profile";
+import { useEffect, useMemo, useState } from "react";
 
 type HomeTab = "passenger" | "driver";
 const HOME_TAB_STORAGE_KEY = "mak.home.activeTab";
@@ -86,6 +91,62 @@ export function Home() {
       queryKey: getGetRideStatsQueryKey(),
     },
   });
+
+  const { data: allRequests = [] } = useListRideRequests({
+    query: {
+      enabled: !!authUser,
+      refetchInterval: 10000,
+      queryKey: getListRideRequestsQueryKey(),
+    },
+  });
+  const { data: allOffers = [] } = useListDriverOffers({
+    query: {
+      enabled: !!authUser,
+      refetchInterval: 10000,
+      queryKey: getListDriverOffersQueryKey(),
+    },
+  });
+
+  const roleLock = useMemo(() => {
+    if (!authUser) return null as "passenger" | "driver" | null;
+    const authPhone = authUser.phone?.trim() ?? "";
+    const profilePhone = readProfile().driverPhone.trim();
+    const driverPhone = profilePhone || authPhone;
+    const telegramId = authUser.telegramUserId?.trim() ?? "";
+
+    const hasActivePassengerRequest = allRequests.some((r) => {
+      if (r.status !== "active" && r.status !== "accepted") return false;
+      if (authPhone && r.passengerPhone === authPhone) return true;
+      if (telegramId && r.passengerTelegramUserId === telegramId) return true;
+      return false;
+    });
+
+    const hasActiveDriverOffer = !!driverPhone && allOffers.some((o) => o.driverPhone === driverPhone);
+    const hasAcceptedDriverRide = !!driverPhone && allRequests.some((r) => r.status === "accepted" && r.driverPhone === driverPhone);
+    const hasActiveDriverRole = hasActiveDriverOffer || hasAcceptedDriverRide;
+
+    if (hasActivePassengerRequest && !hasActiveDriverRole) return "passenger";
+    if (hasActiveDriverRole && !hasActivePassengerRequest) return "driver";
+    return null;
+  }, [allOffers, allRequests, authUser]);
+
+  useEffect(() => {
+    if (roleLock === "passenger" && activeTab === "driver") {
+      setActiveTab("passenger");
+      try {
+        localStorage.setItem(HOME_TAB_STORAGE_KEY, "passenger");
+      } catch {
+        // ignore quota / privacy errors
+      }
+    } else if (roleLock === "driver" && activeTab === "passenger") {
+      setActiveTab("driver");
+      try {
+        localStorage.setItem(HOME_TAB_STORAGE_KEY, "driver");
+      } catch {
+        // ignore quota / privacy errors
+      }
+    }
+  }, [activeTab, roleLock]);
 
   if (authGateOpen) {
     return (
@@ -184,6 +245,7 @@ export function Home() {
           <TabsList className="grid w-full grid-cols-2 p-1 bg-card border shadow-sm rounded-xl h-14 mb-6">
             <TabsTrigger
               value="passenger"
+              disabled={roleLock === "driver"}
               className="rounded-lg h-full font-semibold text-base data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
             >
               <UserRound className="w-4 h-4 mr-2" />
@@ -191,12 +253,23 @@ export function Home() {
             </TabsTrigger>
             <TabsTrigger
               value="driver"
+              disabled={roleLock === "passenger"}
               className="rounded-lg h-full font-semibold text-base data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
             >
               <CarFront className="w-4 h-4 mr-2" />
               {t("tabs.driver")}
             </TabsTrigger>
           </TabsList>
+          {roleLock === "passenger" && (
+            <p className="text-xs text-muted-foreground -mt-4 mb-4">
+              {t("tabs.lock.driver-disabled")}
+            </p>
+          )}
+          {roleLock === "driver" && (
+            <p className="text-xs text-muted-foreground -mt-4 mb-4">
+              {t("tabs.lock.passenger-disabled")}
+            </p>
+          )}
 
           <TabsContent
             value="passenger"
