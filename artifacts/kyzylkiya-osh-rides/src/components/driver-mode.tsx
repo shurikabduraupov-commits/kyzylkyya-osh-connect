@@ -137,6 +137,17 @@ export function DriverMode() {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const prevHasSavedProfileRef = useRef(isProfileComplete(savedProfile));
   const hasSavedProfile = isProfileComplete(savedProfile);
+  const scrollDriverSectionToTop = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const targetTop = rootRef.current
+      ? Math.max(0, rootRef.current.getBoundingClientRect().top + window.scrollY - 8)
+      : 0;
+    // Repeat once more after layout settles to avoid mobile viewport/focus jumps.
+    window.scrollTo({ top: targetTop, behavior: "smooth" });
+    window.setTimeout(() => {
+      window.scrollTo({ top: targetTop, behavior: "smooth" });
+    }, 120);
+  }, []);
   const settlements = useAllSettlements();
 
   const intFromString = (min: number, max: number, msg: string) =>
@@ -776,12 +787,10 @@ export function DriverMode() {
   useEffect(() => {
     const prev = prevHasSavedProfileRef.current;
     if (!prev && hasSavedProfile) {
-      requestAnimationFrame(() => {
-        rootRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
-      });
+      requestAnimationFrame(() => scrollDriverSectionToTop());
     }
     prevHasSavedProfileRef.current = hasSavedProfile;
-  }, [hasSavedProfile]);
+  }, [hasSavedProfile, scrollDriverSectionToTop]);
 
   useEffect(() => {
     if (Object.keys(form.formState.errors).length > 0) {
@@ -1133,6 +1142,7 @@ export function DriverMode() {
                     carSeats: data.carSeats,
                   });
                   setSavedProfile(next);
+                  requestAnimationFrame(() => scrollDriverSectionToTop());
                 })}
                 className="space-y-4"
               >
