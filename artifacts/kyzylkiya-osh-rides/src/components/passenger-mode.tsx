@@ -52,6 +52,7 @@ import { KG_MOBILE_PREFIX, isValidKg996Phone, kg996Suffix } from "@/lib/phone-kg
 import { apiUrl } from "@/lib/api-url";
 
 const pad = (n: number) => String(n).padStart(2, "0");
+const PASSENGER_DRAFT_KEY = "mak.passenger.draft.v1";
 
 function toTimeInput(date: Date): string {
   return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
@@ -190,6 +191,36 @@ export function PassengerMode() {
 
   type CreateRideValues = z.infer<typeof createRideSchema>;
 
+  const readPassengerDraft = useCallback((): Partial<CreateRideValues> | null => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = localStorage.getItem(PASSENGER_DRAFT_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as Partial<CreateRideValues>;
+      return parsed && typeof parsed === "object" ? parsed : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const savePassengerDraft = useCallback((data: Partial<CreateRideValues>) => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem(PASSENGER_DRAFT_KEY, JSON.stringify(data));
+    } catch {
+      // ignore quota/privacy errors
+    }
+  }, []);
+
+  const clearPassengerDraft = useCallback(() => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.removeItem(PASSENGER_DRAFT_KEY);
+    } catch {
+      // ignore quota/privacy errors
+    }
+  }, []);
+
   const defaultDepartAfter = useMemo(
     () => toTimeInput(new Date(Date.now() + 30 * 60 * 1000)),
     [],
@@ -200,6 +231,7 @@ export function PassengerMode() {
   );
 
   const initialProfile = useMemo(() => readProfile(), []);
+  const initialDraft = useMemo(() => readPassengerDraft(), [readPassengerDraft]);
   const authPhonePrefill = useMemo(() => {
     const phone = readAuthUser()?.phone?.trim() ?? "";
     if (/^\+996\d{9}$/.test(phone)) return phone;
@@ -208,15 +240,15 @@ export function PassengerMode() {
   const form = useForm<CreateRideValues>({
     resolver: zodResolver(createRideSchema),
     defaultValues: {
-      origin: initialProfile.lastOrigin || DEFAULT_ORIGIN,
-      destination: initialProfile.lastDestination || DEFAULT_DESTINATION,
-      pickupAddress: "",
-      passengerPhone: authPhonePrefill ?? KG_MOBILE_PREFIX,
-      notes: "",
-      seats: 1,
-      departDay: "today",
-      departAfter: defaultDepartAfter,
-      departBefore: defaultDepartBefore,
+      origin: initialDraft?.origin ?? (initialProfile.lastOrigin || DEFAULT_ORIGIN),
+      destination: initialDraft?.destination ?? (initialProfile.lastDestination || DEFAULT_DESTINATION),
+      pickupAddress: initialDraft?.pickupAddress ?? "",
+      passengerPhone: initialDraft?.passengerPhone ?? authPhonePrefill ?? KG_MOBILE_PREFIX,
+      notes: initialDraft?.notes ?? "",
+      seats: initialDraft?.seats ?? 1,
+      departDay: initialDraft?.departDay ?? "today",
+      departAfter: initialDraft?.departAfter ?? defaultDepartAfter,
+      departBefore: initialDraft?.departBefore ?? defaultDepartBefore,
     },
   });
 
@@ -270,6 +302,7 @@ export function PassengerMode() {
   const createMutation = useCreateRideRequest({
     mutation: {
       onSuccess: (data) => {
+        clearPassengerDraft();
         writeActiveRideRequestId(data.id);
         setActiveRequestId(data.id);
         primeAudio();
@@ -281,6 +314,7 @@ export function PassengerMode() {
       },
       onError: (error) => {
         if (isAuthError(error)) {
+          savePassengerDraft(form.getValues());
           clearAuthSession();
           requestAuthLogin();
           toast({
@@ -504,6 +538,7 @@ export function PassengerMode() {
   const onSubmit = (data: CreateRideValues) => {
     if (!readAuthToken()) {
       requestAuthLogin();
+      savePassengerDraft(data);
       toast({
         title: t("auth.required"),
         variant: "destructive",
