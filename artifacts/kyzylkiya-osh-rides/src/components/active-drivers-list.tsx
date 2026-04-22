@@ -29,6 +29,19 @@ export function ActiveDriversList({ origin, destination }: Props) {
     if (Number.isNaN(ts)) return false;
     return Date.now() - ts <= 15 * 60 * 1000;
   };
+  const updatedAgo = (lastSeenAt?: string | null) => {
+    if (!lastSeenAt) return t("passenger.drivers.updated.unknown");
+    const ts = Date.parse(lastSeenAt);
+    if (Number.isNaN(ts)) return t("passenger.drivers.updated.unknown");
+    const sec = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+    if (sec < 10) return t("time.now");
+    if (sec < 60) return `${sec} сек`;
+    const min = Math.floor(sec / 60);
+    if (min < 60) return t("time.minutes", { n: min });
+    const hours = Math.floor(min / 60);
+    if (hours < 24) return t("time.hours", { n: hours });
+    return t("time.days", { n: Math.floor(hours / 24) });
+  };
 
   return (
     <Card className="w-full shadow-sm border-border">
@@ -108,8 +121,11 @@ export function ActiveDriversList({ origin, destination }: Props) {
                       >
                         {isOnline(d.lastSeenAt)
                           ? t("passenger.drivers.online")
-                          : t("passenger.drivers.offline")}
+                          : t("passenger.drivers.stale")}
                       </span>
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {t("passenger.drivers.updated", { when: updatedAgo(d.lastSeenAt) })}
                     </p>
                   </div>
                   <span

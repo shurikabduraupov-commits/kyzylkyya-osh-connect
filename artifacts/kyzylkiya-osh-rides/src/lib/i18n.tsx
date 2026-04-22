@@ -84,6 +84,10 @@ const translations: Record<Language, Dict> = {
     "passenger.seats.label": "Канча орун керек?",
     "passenger.seats.placeholder": "Орун тандаңыз",
     "passenger.seats.value": "{n} орун",
+    "passenger.repeat-last": "Акыркы сапарды кайталоо",
+    "passenger.advanced.show": "Кошумча талааларды ачуу",
+    "passenger.advanced.hide": "Кошумча талааларды жашыруу",
+    "passenger.other-sections": "Башка бөлүмдөрдү көрсөтүү",
     "passenger.submit": "Заявка жөнөтүү",
     "passenger.submit.loading": "Жөнөтүлүүдө...",
 
@@ -199,6 +203,9 @@ const translations: Record<Language, Dict> = {
     "passenger.drivers.seats-free": "{n} орун бош",
     "passenger.drivers.online": "Онлайн",
     "passenger.drivers.offline": "Оффлайн",
+    "passenger.drivers.stale": "Эски маалымат",
+    "passenger.drivers.updated": "Жаңыртылганы: {when}",
+    "passenger.drivers.updated.unknown": "белгисиз",
     "passenger.drivers.depart": "Чыгуу",
 
     "passenger.error.origin": "Кайсы жерден чыгарыңызды тандаңыз",
@@ -396,6 +403,10 @@ const translations: Record<Language, Dict> = {
     "passenger.seats.label": "Сколько мест нужно?",
     "passenger.seats.placeholder": "Выберите количество мест",
     "passenger.seats.value": "{n} мест",
+    "passenger.repeat-last": "Повторить последнюю поездку",
+    "passenger.advanced.show": "Показать дополнительные поля",
+    "passenger.advanced.hide": "Скрыть дополнительные поля",
+    "passenger.other-sections": "Показать другие разделы",
     "passenger.submit": "Отправить заявку",
     "passenger.submit.loading": "Отправляется...",
 
@@ -511,6 +522,9 @@ const translations: Record<Language, Dict> = {
     "passenger.drivers.seats-free": "{n} мест свободно",
     "passenger.drivers.online": "Онлайн",
     "passenger.drivers.offline": "Оффлайн",
+    "passenger.drivers.stale": "Неактуально",
+    "passenger.drivers.updated": "Обновлено: {when}",
+    "passenger.drivers.updated.unknown": "неизвестно",
     "passenger.drivers.depart": "Выезд",
 
     "passenger.error.origin": "Выберите пункт отправления",

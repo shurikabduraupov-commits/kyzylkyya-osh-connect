@@ -14,6 +14,13 @@ const AUTH_TOKEN_KEY = "mak.auth.token";
 const AUTH_USER_KEY = "mak.auth.user";
 export const AUTH_SESSION_CLEARED_EVENT = "mak:auth-session-cleared";
 export const AUTH_LOGIN_REQUIRED_EVENT = "mak:auth-login-required";
+const LOGOUT_CLEAR_KEYS = [
+  "mak.passenger.activeRequest.v1",
+  "mak.passenger.draft.v1",
+  "mak.profile.v2",
+  "mak.profile.v1",
+  "mak.home.activeTab",
+] as const;
 
 function authHeaders(): Record<string, string> {
   const token = readAuthToken();
@@ -37,6 +44,29 @@ export function clearAuthSession() {
   localStorage.removeItem(AUTH_TOKEN_KEY);
   localStorage.removeItem(AUTH_USER_KEY);
   window.dispatchEvent(new Event(AUTH_SESSION_CLEARED_EVENT));
+}
+
+export function clearAuthSessionAndUserState() {
+  clearAuthSession();
+  for (const key of LOGOUT_CLEAR_KEYS) {
+    localStorage.removeItem(key);
+  }
+}
+
+export async function logoutAndClearUserState() {
+  const token = readAuthToken();
+  try {
+    if (token) {
+      await fetch(apiUrl("/rides-api/auth/logout"), {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    }
+  } catch {
+    // ignore network/backend errors on logout
+  } finally {
+    clearAuthSessionAndUserState();
+  }
 }
 
 export function requestAuthLogin() {

@@ -360,6 +360,38 @@ def has_active_driver_role(driver_phone):
     )
 
 
+def cancel_active_passenger_requests(session_user, passenger_phone):
+    """Cancel active/accepted passenger requests that belong to this user."""
+    phone = str(passenger_phone or "").strip()
+    session_tid = str((session_user or {}).get("telegramUserId", "")).strip() if isinstance(session_user, dict) else ""
+    affected = 0
+    for ride in requests_store:
+        if ride.get("status") not in ("active", "accepted"):
+            continue
+        ride_phone = str(ride.get("passengerPhone", "")).strip()
+        ride_tid = str(ride.get("passengerTelegramUserId", "")).strip()
+        belongs = (phone and ride_phone and phone == ride_phone) or (session_tid and ride_tid and session_tid == ride_tid)
+        if not belongs:
+            continue
+        was_accepted = ride.get("status") == "accepted"
+        ride["status"] = "cancelled"
+        ride["cancelledAt"] = now_iso()
+        if was_accepted:
+            ride["driverName"] = None
+            ride["driverPhone"] = None
+            ride["driverAge"] = None
+            ride["driverExperience"] = None
+            ride["carMake"] = None
+            ride["carYear"] = None
+            ride["carPlate"] = None
+            ride["carColor"] = None
+            ride["carSeats"] = None
+            ride["acceptedAt"] = None
+            ride["rideProgress"] = None
+        affected += 1
+    return affected
+
+
 def verify_telegram_widget_auth(payload):
     if not TELEGRAM_BOT_TOKEN:
         return False
@@ -1012,6 +1044,25 @@ class RideHandler(BaseHTTPRequestHandler):
             user = upsert_phone_user(name, phone)
             token, session = issue_session(user)
             self._send_json(200, {"token": token, "user": _auth_public_user(session)})
+            return
+        if parts == ["auth", "logout"]:
+            session_user = self._current_session_user()
+            if not session_user:
+                self._send_json(200, {"ok": True, "cancelledPassengerRequests": 0, "cancelledDriverOffers": 0, "releasedDriverRides": 0})
+                return
+            user_phone = str(session_user.get("phone", "")).strip()
+            cancelled_passenger = cancel_active_passenger_requests(session_user, user_phone)
+            cancelled_offers = cancel_active_offers_for_driver(user_phone)
+            released_rides = release_all_accepted_rides_for_driver(user_phone)
+            self._send_json(
+                200,
+                {
+                    "ok": True,
+                    "cancelledPassengerRequests": cancelled_passenger,
+                    "cancelledDriverOffers": cancelled_offers,
+                    "releasedDriverRides": released_rides,
+                },
+            )
             return
         if parts == ["requests"]:
             if _env_truthy("AUTH_REQUIRED") and not self._current_session_user():

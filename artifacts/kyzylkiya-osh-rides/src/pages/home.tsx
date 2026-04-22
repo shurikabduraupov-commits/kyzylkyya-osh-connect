@@ -28,7 +28,7 @@ import { useTranslation } from "@/lib/i18n";
 import {
   AUTH_LOGIN_REQUIRED_EVENT,
   AUTH_SESSION_CLEARED_EVENT,
-  clearAuthSession,
+  logoutAndClearUserState,
   readAuthToken,
   readAuthUser,
   type AuthUser,
@@ -299,7 +299,7 @@ export function Home() {
             <AlertDialogCancel>{t("auth.logout.confirm.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                clearAuthSession();
+                void logoutAndClearUserState();
                 setAuthUser(null);
               }}
             >
