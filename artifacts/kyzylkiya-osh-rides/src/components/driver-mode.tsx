@@ -1735,6 +1735,8 @@ export function DriverMode() {
             id: pickupMapRide.id,
             origin: pickupMapRide.origin,
             pickupAddress: pickupMapRide.pickupAddress,
+            pickupLat: pickupMapRide.pickupLat,
+            pickupLon: pickupMapRide.pickupLon,
           }}
         />
       )}

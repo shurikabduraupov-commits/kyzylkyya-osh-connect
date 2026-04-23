@@ -13,6 +13,8 @@ export interface RideRequest {
   origin: string;
   destination: string;
   pickupAddress: string;
+  pickupLat?: number | null;
+  pickupLon?: number | null;
   passengerPhone: string;
   /** Telegram user id (when заявка без телефона) */
   passengerTelegramUserId?: string;

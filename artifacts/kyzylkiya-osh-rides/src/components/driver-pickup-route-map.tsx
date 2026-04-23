@@ -9,6 +9,8 @@ export type PickupMapRide = {
   id: string;
   origin: string;
   pickupAddress: string;
+  pickupLat?: number | null;
+  pickupLon?: number | null;
 };
 
 type LatLng = { lat: number; lng: number };
@@ -58,6 +60,20 @@ export function DriverPickupRouteMap({ ride }: Props) {
       setLoadingPassenger(false);
       return;
     }
+    const fromGps =
+      ride.pickupLat != null &&
+      ride.pickupLon != null &&
+      Number.isFinite(ride.pickupLat) &&
+      Number.isFinite(ride.pickupLon)
+        ? { lat: ride.pickupLat as number, lng: ride.pickupLon as number }
+        : null;
+    if (fromGps) {
+      setPassengerPos(fromGps);
+      setPassengerError(false);
+      setLoadingPassenger(false);
+      return;
+    }
+
     const ac = new AbortController();
     let cancelled = false;
     setLoadingPassenger(true);
@@ -97,7 +113,7 @@ export function DriverPickupRouteMap({ ride }: Props) {
       cancelled = true;
       ac.abort();
     };
-  }, [ride?.id, ride?.origin, ride?.pickupAddress]);
+  }, [ride?.id, ride?.origin, ride?.pickupAddress, ride?.pickupLat, ride?.pickupLon]);
 
   useEffect(() => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {

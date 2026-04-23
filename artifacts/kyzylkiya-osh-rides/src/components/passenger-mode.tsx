@@ -31,6 +31,7 @@ import {
   Loader2,
   ListChecks,
   Star,
+  Navigation,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DEFAULT_DESTINATION, DEFAULT_ORIGIN } from "@/lib/settlements";
@@ -139,6 +140,9 @@ export function PassengerMode() {
   const [previousStatus, setPreviousStatus] = useState<string | null>(null);
   const [ratingValue, setRatingValue] = useState<number>(5);
   const [isRatingSubmitting, setIsRatingSubmitting] = useState(false);
+  const [pickupGps, setPickupGps] = useState<{ lat: number; lon: number } | null>(null);
+  const [pickupGpsBusy, setPickupGpsBusy] = useState(false);
+  const [pickupGpsDenied, setPickupGpsDenied] = useState(false);
   const { toast, dismiss } = useToast();
   const queryClient = useQueryClient();
   const settlements = useAllSettlements();
@@ -270,6 +274,8 @@ export function PassengerMode() {
         : isValidKg996Phone(fromForm)
           ? fromForm
           : authPhonePrefill ?? KG_MOBILE_PREFIX;
+      setPickupGps(null);
+      setPickupGpsDenied(false);
       form.reset({
         origin: initialProfile.lastOrigin || DEFAULT_ORIGIN,
         destination: initialProfile.lastDestination || DEFAULT_DESTINATION,
@@ -312,6 +318,8 @@ export function PassengerMode() {
     mutation: {
       onSuccess: (data) => {
         clearPassengerDraft();
+        setPickupGps(null);
+        setPickupGpsDenied(false);
         writeActiveRideRequestId(data.id);
         setActiveRequestId(data.id);
         primeAudio();
@@ -565,6 +573,7 @@ export function PassengerMode() {
       notes: rest.notes.trim(),
       departAfter: combineDateTime(departDay, departAfter).toISOString(),
       departBefore: combineDateTime(departDay, departBefore).toISOString(),
+      ...(pickupGps ? { pickupLat: pickupGps.lat, pickupLon: pickupGps.lon } : {}),
     };
     updateProfile({
       lastOrigin: data.origin,
@@ -572,6 +581,33 @@ export function PassengerMode() {
     });
     createMutation.mutate({ data: payload });
   };
+
+  const requestPickupGps = useCallback(() => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      toast({
+        title: t("passenger.gps-pickup.error"),
+        variant: "destructive",
+      });
+      return;
+    }
+    setPickupGpsDenied(false);
+    setPickupGpsBusy(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setPickupGpsBusy(false);
+        setPickupGps({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+        toast({
+          title: t("passenger.gps-pickup.saved-title"),
+          description: t("passenger.gps-pickup.saved-desc"),
+        });
+      },
+      () => {
+        setPickupGpsBusy(false);
+        setPickupGpsDenied(true);
+      },
+      { enableHighAccuracy: true, timeout: 20_000, maximumAge: 0 },
+    );
+  }, [t, toast]);
 
   const watchOrigin = form.watch("origin");
   const watchDestination = form.watch("destination");
@@ -600,6 +636,8 @@ export function PassengerMode() {
   const latestCompletedRide = passengerHistory[0];
 
   const repeatFromHistory = (ride: (typeof passengerHistory)[number]) => {
+    setPickupGps(null);
+    setPickupGpsDenied(false);
     form.setValue("origin", ride.origin, { shouldValidate: true, shouldDirty: true });
     form.setValue("destination", ride.destination, { shouldValidate: true, shouldDirty: true });
     form.setValue("seats", ride.seats, { shouldValidate: true, shouldDirty: true });
@@ -986,6 +1024,44 @@ export function PassengerMode() {
                     />
                   </FormControl>
                   <p className="text-xs text-muted-foreground">{t("passenger.address.hint")}</p>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="gap-2 shrink-0"
+                      onClick={requestPickupGps}
+                      disabled={pickupGpsBusy}
+                    >
+                      {pickupGpsBusy ? (
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                      ) : (
+                        <Navigation className="h-4 w-4" aria-hidden />
+                      )}
+                      {t("passenger.gps-pickup.button")}
+                    </Button>
+                    {pickupGps && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                        <span className="text-foreground font-medium">{t("passenger.gps-pickup.active")}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-destructive"
+                          onClick={() => {
+                            setPickupGps(null);
+                            setPickupGpsDenied(false);
+                          }}
+                        >
+                          {t("passenger.gps-pickup.clear")}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  {pickupGpsDenied && (
+                    <p className="text-xs text-destructive">{t("passenger.gps-pickup.denied")}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">{t("passenger.gps-pickup.hint")}</p>
                   <FormMessage />
                 </FormItem>
               )}

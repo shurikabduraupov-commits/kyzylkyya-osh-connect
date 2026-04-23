@@ -282,6 +282,16 @@ components:
         departBefore:
           type: string
           format: date-time
+        pickupLat:
+          type: number
+          format: double
+          nullable: true
+          description: Optional WGS84 latitude from passenger device (pickup point).
+        pickupLon:
+          type: number
+          format: double
+          nullable: true
+          description: Optional WGS84 longitude from passenger device (pickup point).
       required:
         - origin
         - destination
@@ -353,6 +363,14 @@ components:
           type: string
         pickupAddress:
           type: string
+        pickupLat:
+          type: number
+          format: double
+          nullable: true
+        pickupLon:
+          type: number
+          format: double
+          nullable: true
         passengerPhone:
           type: string
         passengerTelegramUserId:

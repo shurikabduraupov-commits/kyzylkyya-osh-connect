@@ -24,4 +24,8 @@ export interface CreateRideRequest {
   seats: number;
   departAfter: Date;
   departBefore: Date;
+  /** Optional WGS84 latitude from passenger device (pickup point). */
+  pickupLat?: number | null;
+  /** Optional WGS84 longitude from passenger device (pickup point). */
+  pickupLon?: number | null;
 }

@@ -31,6 +31,8 @@ export const ListRideRequestsResponseItem = zod.object({
   "origin": zod.string(),
   "destination": zod.string(),
   "pickupAddress": zod.string(),
+  "pickupLat": zod.number().nullish(),
+  "pickupLon": zod.number().nullish(),
   "passengerPhone": zod.string(),
   "passengerTelegramUserId": zod.string().optional().describe('Telegram user id (when заявка без телефона)'),
   "passengerTelegramUsername": zod.string().nullish(),
@@ -85,7 +87,9 @@ export const CreateRideRequestBody = zod.object({
   "notes": zod.string().max(createRideRequestBodyNotesMax).optional(),
   "seats": zod.number().min(1).max(createRideRequestBodySeatsMax),
   "departAfter": zod.coerce.date(),
-  "departBefore": zod.coerce.date()
+  "departBefore": zod.coerce.date(),
+  "pickupLat": zod.number().nullish().describe('Optional WGS84 latitude from passenger device (pickup point).'),
+  "pickupLon": zod.number().nullish().describe('Optional WGS84 longitude from passenger device (pickup point).')
 })
 
 
@@ -107,6 +111,8 @@ export const GetRideRequestResponse = zod.object({
   "origin": zod.string(),
   "destination": zod.string(),
   "pickupAddress": zod.string(),
+  "pickupLat": zod.number().nullish(),
+  "pickupLon": zod.number().nullish(),
   "passengerPhone": zod.string(),
   "passengerTelegramUserId": zod.string().optional().describe('Telegram user id (when заявка без телефона)'),
   "passengerTelegramUsername": zod.string().nullish(),
@@ -155,6 +161,8 @@ export const CancelRideRequestResponse = zod.object({
   "origin": zod.string(),
   "destination": zod.string(),
   "pickupAddress": zod.string(),
+  "pickupLat": zod.number().nullish(),
+  "pickupLon": zod.number().nullish(),
   "passengerPhone": zod.string(),
   "passengerTelegramUserId": zod.string().optional().describe('Telegram user id (when заявка без телефона)'),
   "passengerTelegramUsername": zod.string().nullish(),
@@ -208,6 +216,8 @@ export const ReleaseRideRequestResponse = zod.object({
   "origin": zod.string(),
   "destination": zod.string(),
   "pickupAddress": zod.string(),
+  "pickupLat": zod.number().nullish(),
+  "pickupLon": zod.number().nullish(),
   "passengerPhone": zod.string(),
   "passengerTelegramUserId": zod.string().optional().describe('Telegram user id (when заявка без телефона)'),
   "passengerTelegramUsername": zod.string().nullish(),
@@ -291,6 +301,8 @@ export const AcceptRideRequestResponse = zod.object({
   "origin": zod.string(),
   "destination": zod.string(),
   "pickupAddress": zod.string(),
+  "pickupLat": zod.number().nullish(),
+  "pickupLon": zod.number().nullish(),
   "passengerPhone": zod.string(),
   "passengerTelegramUserId": zod.string().optional().describe('Telegram user id (when заявка без телефона)'),
   "passengerTelegramUsername": zod.string().nullish(),

@@ -6,6 +6,8 @@ type RideRequest = {
   origin: string;
   destination: string;
   pickupAddress: string;
+  pickupLat: number | null;
+  pickupLon: number | null;
   passengerPhone: string;
   notes: string | null;
   seats: number;
@@ -32,6 +34,29 @@ router.post("/requests", (req, res) => {
   const origin = String(req.body?.origin ?? "").trim();
   const destination = String(req.body?.destination ?? "").trim();
   const pickupAddress = String(req.body?.pickupAddress ?? "").trim();
+  const rawLat = req.body?.pickupLat;
+  const rawLon = req.body?.pickupLon;
+  let pickupLat: number | null = null;
+  let pickupLon: number | null = null;
+  if (rawLat != null && rawLon != null) {
+    const lat = Number(rawLat);
+    const lon = Number(rawLon);
+    if (
+      Number.isFinite(lat) &&
+      Number.isFinite(lon) &&
+      lat >= -90 &&
+      lat <= 90 &&
+      lon >= -180 &&
+      lon <= 180 &&
+      lat >= 37 &&
+      lat <= 46 &&
+      lon >= 68 &&
+      lon <= 82
+    ) {
+      pickupLat = lat;
+      pickupLon = lon;
+    }
+  }
   const passengerPhone = String(req.body?.passengerPhone ?? "").trim();
   const notesRaw = String(req.body?.notes ?? "").trim();
   const notes = notesRaw.length === 0 ? null : notesRaw.slice(0, 500);
@@ -84,6 +109,8 @@ router.post("/requests", (req, res) => {
     origin,
     destination,
     pickupAddress,
+    pickupLat,
+    pickupLon,
     passengerPhone,
     notes,
     seats,

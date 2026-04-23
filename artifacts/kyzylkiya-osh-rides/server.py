@@ -1072,6 +1072,28 @@ class RideHandler(BaseHTTPRequestHandler):
             origin = str(data.get("origin", "")).strip()
             destination = str(data.get("destination", "")).strip()
             pickup_address = str(data.get("pickupAddress", "")).strip()
+
+            def _parse_pickup_gps(payload):
+                """Optional WGS84 coords from passenger; both must be valid together."""
+                raw_lat = payload.get("pickupLat")
+                raw_lon = payload.get("pickupLon")
+                if raw_lat is None and raw_lon is None:
+                    return None, None
+                if raw_lat is None or raw_lon is None:
+                    return None, None
+                try:
+                    lat = float(raw_lat)
+                    lon = float(raw_lon)
+                except (TypeError, ValueError):
+                    return None, None
+                if not (-90.0 <= lat <= 90.0 and -180.0 <= lon <= 180.0):
+                    return None, None
+                # Kyrgyzstan and immediate border area (reject obvious garbage)
+                if not (37.0 <= lat <= 46.0 and 68.0 <= lon <= 82.0):
+                    return None, None
+                return lat, lon
+
+            pickup_lat, pickup_lon = _parse_pickup_gps(data)
             passenger_phone_raw = str(data.get("passengerPhone", "")).strip()
             if re.fullmatch(r"\+996\d{9}", passenger_phone_raw):
                 passenger_phone = passenger_phone_raw
@@ -1172,6 +1194,8 @@ class RideHandler(BaseHTTPRequestHandler):
                 "origin": origin,
                 "destination": destination,
                 "pickupAddress": pickup_address,
+                "pickupLat": pickup_lat,
+                "pickupLon": pickup_lon,
                 "passengerPhone": passenger_phone,
                 "passengerTelegramUserId": ptid,
                 "passengerTelegramUsername": puser or None,

@@ -37,6 +37,10 @@ export interface CreateRideRequest {
   seats: number;
   departAfter: string;
   departBefore: string;
+  /** Optional WGS84 latitude from passenger device (pickup point). */
+  pickupLat?: number | null;
+  /** Optional WGS84 longitude from passenger device (pickup point). */
+  pickupLon?: number | null;
 }
 
 export interface ReleaseRideRequest {
@@ -95,6 +99,8 @@ export interface RideRequest {
   origin: string;
   destination: string;
   pickupAddress: string;
+  pickupLat?: number | null;
+  pickupLon?: number | null;
   passengerPhone: string;
   /** Telegram user id (when заявка без телефона) */
   passengerTelegramUserId?: string;
