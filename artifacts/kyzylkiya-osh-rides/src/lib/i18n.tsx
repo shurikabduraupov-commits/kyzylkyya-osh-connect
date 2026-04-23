@@ -76,12 +76,17 @@ const translations: Record<Language, Dict> = {
     "passenger.address.hint": "OpenStreetMap маалымат базасынан көчө/объект тандаңыз",
     "passenger.gps-pickup.button": "Жайгашуумду көрсөтүү (GPS)",
     "passenger.gps-pickup.hint":
-      "Ыктыярдуу: айдоочу сизди так табышы үчүн. Баскычты басканда гана браузер уруксат сурайт.",
+      "GPS ыктыярдуу — заявка адрести толтуруп гана жөнөтүлөт. Instagram ичинен көбүнчө геолокация иштебейт; керек болсо Chrome/Safarиден ачыңыз.",
+    "passenger.gps-pickup.inapp-warning":
+      "Instagram/Facebook сыяктуу колдонмолордун ичиндеги браузерде геолокация көбүнчө өчүрүлөт. Заявка үчүн GPS милдеттүү эмес.",
+    "passenger.gps-pickup.denied-inapp":
+      "Бул жерде геолокация ачылбай калышы мүмкүн. Сайтты тышкы браузерде ачыңыз (мисалы Instagram: үч нүктө ⋮ → «Тышкы браузерде ачуу» / Open in browser).",
     "passenger.gps-pickup.saved-title": "Жайгашуу сакталды",
     "passenger.gps-pickup.saved-desc": "Заявка менен айдоочуга жөнөтүлөт.",
     "passenger.gps-pickup.active": "GPS кошулду",
     "passenger.gps-pickup.clear": "Өчүрүү",
-    "passenger.gps-pickup.denied": "Геолокацияга уруксат берилген жок же жеткиликтүү эмес.",
+    "passenger.gps-pickup.denied": "Сиз геолокацияга уруксат берген жоксуз же браузер бөгөттөдү.",
+    "passenger.gps-pickup.unavailable": "Далдакты аныктоо иштебеди. Кийинчерээк кайра аракет кылыңыз же адрести кол менен толтуруңуз.",
     "passenger.gps-pickup.error": "Бул түмөндө геолокация колдоого алынбайт.",
     "passenger.phone.label": "Байланыш телефону",
     "passenger.phone.placeholder": "+996 555 000 000",
@@ -416,12 +421,17 @@ const translations: Record<Language, Dict> = {
     "passenger.address.hint": "Выберите улицу или объект из базы OpenStreetMap",
     "passenger.gps-pickup.button": "Показать моё местоположение (GPS)",
     "passenger.gps-pickup.hint":
-      "Необязательно: чтобы водитель точнее вас нашёл. Браузер спросит разрешение только после нажатия.",
+      "GPS необязателен — заявку можно отправить, заполнив только адрес. Во встроенном браузере Instagram геолокация часто не работает; при необходимости откройте сайт в Chrome или Safari.",
+    "passenger.gps-pickup.inapp-warning":
+      "Во встроенном браузере Instagram и похожих приложений геолокация часто отключена. Для заявки GPS не требуется.",
+    "passenger.gps-pickup.denied-inapp":
+      "Здесь геолокация может быть недоступна. Откройте сайт во внешнем браузере: в Instagram нажмите ⋮ (три точки) → «Открыть в браузере» / Open in external browser.",
     "passenger.gps-pickup.saved-title": "Местоположение сохранено",
     "passenger.gps-pickup.saved-desc": "Будет отправлено с заявкой водителю.",
     "passenger.gps-pickup.active": "GPS добавлен",
     "passenger.gps-pickup.clear": "Сбросить",
-    "passenger.gps-pickup.denied": "Доступ к геолокации не выдан или недоступен.",
+    "passenger.gps-pickup.denied": "Вы не выдали доступ к геолокации или браузер его заблокировал.",
+    "passenger.gps-pickup.unavailable": "Не удалось определить местоположение. Попробуйте позже или укажите адрес вручную.",
     "passenger.gps-pickup.error": "На этом устройстве геолокация недоступна.",
     "passenger.phone.label": "Контактный телефон",
     "passenger.phone.placeholder": "+996 555 000 000",

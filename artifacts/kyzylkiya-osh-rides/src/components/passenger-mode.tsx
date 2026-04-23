@@ -51,6 +51,7 @@ import {
 } from "@/lib/active-ride-request";
 import { KG_MOBILE_PREFIX, isValidKg996Phone, kg996Suffix } from "@/lib/phone-kg";
 import { apiUrl } from "@/lib/api-url";
+import { isLikelyInAppBrowser } from "@/lib/in-app-browser";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const PASSENGER_DRAFT_KEY = "mak.passenger.draft.v1";
@@ -142,7 +143,12 @@ export function PassengerMode() {
   const [isRatingSubmitting, setIsRatingSubmitting] = useState(false);
   const [pickupGps, setPickupGps] = useState<{ lat: number; lon: number } | null>(null);
   const [pickupGpsBusy, setPickupGpsBusy] = useState(false);
-  const [pickupGpsDenied, setPickupGpsDenied] = useState(false);
+  /** Why GPS failed after user tapped the button (null = no error shown). */
+  const [pickupGpsError, setPickupGpsError] = useState<"inapp" | "denied" | "unavailable" | null>(null);
+  const inAppBrowser = useMemo(
+    () => (typeof window !== "undefined" ? isLikelyInAppBrowser() : false),
+    [],
+  );
   const { toast, dismiss } = useToast();
   const queryClient = useQueryClient();
   const settlements = useAllSettlements();
@@ -275,7 +281,7 @@ export function PassengerMode() {
           ? fromForm
           : authPhonePrefill ?? KG_MOBILE_PREFIX;
       setPickupGps(null);
-      setPickupGpsDenied(false);
+      setPickupGpsError(null);
       form.reset({
         origin: initialProfile.lastOrigin || DEFAULT_ORIGIN,
         destination: initialProfile.lastDestination || DEFAULT_DESTINATION,
@@ -319,7 +325,7 @@ export function PassengerMode() {
       onSuccess: (data) => {
         clearPassengerDraft();
         setPickupGps(null);
-        setPickupGpsDenied(false);
+        setPickupGpsError(null);
         writeActiveRideRequestId(data.id);
         setActiveRequestId(data.id);
         primeAudio();
@@ -590,20 +596,29 @@ export function PassengerMode() {
       });
       return;
     }
-    setPickupGpsDenied(false);
+    setPickupGpsError(null);
     setPickupGpsBusy(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setPickupGpsBusy(false);
+        setPickupGpsError(null);
         setPickupGps({ lat: pos.coords.latitude, lon: pos.coords.longitude });
         toast({
           title: t("passenger.gps-pickup.saved-title"),
           description: t("passenger.gps-pickup.saved-desc"),
         });
       },
-      () => {
+      (err) => {
         setPickupGpsBusy(false);
-        setPickupGpsDenied(true);
+        if (isLikelyInAppBrowser()) {
+          setPickupGpsError("inapp");
+          return;
+        }
+        if (err && typeof err === "object" && "code" in err && (err as GeolocationPositionError).code === 1) {
+          setPickupGpsError("denied");
+          return;
+        }
+        setPickupGpsError("unavailable");
       },
       { enableHighAccuracy: true, timeout: 20_000, maximumAge: 0 },
     );
@@ -637,7 +652,7 @@ export function PassengerMode() {
 
   const repeatFromHistory = (ride: (typeof passengerHistory)[number]) => {
     setPickupGps(null);
-    setPickupGpsDenied(false);
+    setPickupGpsError(null);
     form.setValue("origin", ride.origin, { shouldValidate: true, shouldDirty: true });
     form.setValue("destination", ride.destination, { shouldValidate: true, shouldDirty: true });
     form.setValue("seats", ride.seats, { shouldValidate: true, shouldDirty: true });
@@ -1024,6 +1039,11 @@ export function PassengerMode() {
                     />
                   </FormControl>
                   <p className="text-xs text-muted-foreground">{t("passenger.address.hint")}</p>
+                  {inAppBrowser && !pickupGps && pickupGpsError !== "inapp" && (
+                    <p className="text-xs leading-snug text-amber-950 dark:text-amber-100 bg-amber-100/90 dark:bg-amber-950/50 border border-amber-200/80 dark:border-amber-800/60 rounded-md px-2.5 py-2">
+                      {t("passenger.gps-pickup.inapp-warning")}
+                    </p>
+                  )}
                   <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                     <Button
                       type="button"
@@ -1050,7 +1070,7 @@ export function PassengerMode() {
                           className="h-7 px-2 text-destructive"
                           onClick={() => {
                             setPickupGps(null);
-                            setPickupGpsDenied(false);
+                            setPickupGpsError(null);
                           }}
                         >
                           {t("passenger.gps-pickup.clear")}
@@ -1058,8 +1078,16 @@ export function PassengerMode() {
                       </div>
                     )}
                   </div>
-                  {pickupGpsDenied && (
+                  {pickupGpsError === "inapp" && (
+                    <p className="text-xs leading-snug text-amber-950 dark:text-amber-100 bg-amber-100/90 dark:bg-amber-950/50 border border-amber-200/80 dark:border-amber-800/60 rounded-md px-2.5 py-2">
+                      {t("passenger.gps-pickup.denied-inapp")}
+                    </p>
+                  )}
+                  {pickupGpsError === "denied" && (
                     <p className="text-xs text-destructive">{t("passenger.gps-pickup.denied")}</p>
+                  )}
+                  {pickupGpsError === "unavailable" && (
+                    <p className="text-xs text-muted-foreground">{t("passenger.gps-pickup.unavailable")}</p>
                   )}
                   <p className="text-xs text-muted-foreground">{t("passenger.gps-pickup.hint")}</p>
                   <FormMessage />
