@@ -34,7 +34,6 @@ import { alertWarning } from "@/lib/alerts";
 import { KG_MOBILE_PREFIX, isValidKg996Phone, kg996Suffix } from "@/lib/phone-kg";
 import { apiUrl } from "@/lib/api-url";
 import { Car } from "lucide-react";
-import { DriverPickupRouteMap } from "@/components/driver-pickup-route-map";
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 const DRIVER_PUBLISH_DRAFT_KEY = "mak.driver.publish.draft.v1";
@@ -864,23 +863,6 @@ export function DriverMode() {
       !!savedProfile.driverPhone,
   );
 
-  const pickupMapRide = useMemo(() => {
-    const isPickupPhase = (p: string | null | undefined) => {
-      const v = p ?? "assigned";
-      return v === "assigned" || v === "en_route" || v === "arrived";
-    };
-    const list = myAcceptedRides.filter(
-      (r) => r.status === "accepted" && isPickupPhase(r.rideProgress as string | null | undefined),
-    );
-    const rank = (p: string | null | undefined) => {
-      const v = p ?? "assigned";
-      if (v === "en_route") return 0;
-      if (v === "assigned") return 1;
-      return 2;
-    };
-    list.sort((a, b) => rank(a.rideProgress) - rank(b.rideProgress));
-    return list[0] ?? null;
-  }, [myAcceptedRides]);
   const myHistoryRides = requests
     .filter(
       (request) =>
@@ -1727,18 +1709,6 @@ export function DriverMode() {
             </Card>
           ))}
         </div>
-      )}
-
-      {pickupMapRide && (
-        <DriverPickupRouteMap
-          ride={{
-            id: pickupMapRide.id,
-            origin: pickupMapRide.origin,
-            pickupAddress: pickupMapRide.pickupAddress,
-            pickupLat: pickupMapRide.pickupLat,
-            pickupLon: pickupMapRide.pickupLon,
-          }}
-        />
       )}
 
       <Dialog open={!!selectedRequestId} onOpenChange={(open) => !open && setSelectedRequestId(null)}>
